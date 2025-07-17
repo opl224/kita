@@ -29,6 +29,10 @@ body {
     --ring: 24 95% 53%;
 
     --radius: 0.5rem;
+    
+    --shadow-light: hsl(220 20% 100%);
+    --shadow-dark: hsl(220 13% 85%);
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -59,6 +63,9 @@ body {
     --input: 0 0% 15%;
     --ring: 300 26% 86%;
     
+    --shadow-light: hsl(0 0% 15%);
+    --shadow-dark: hsl(0 0% 5%);
+
     --sidebar-background: 0 0% 12%;
     --sidebar-foreground: 240 67% 97%;
     --sidebar-primary: 300 26% 86%;

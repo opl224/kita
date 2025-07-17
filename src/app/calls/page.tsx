@@ -35,7 +35,7 @@ type Group = {
 };
 
 
-const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6";
+const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
 
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);

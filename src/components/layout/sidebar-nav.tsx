@@ -86,7 +86,7 @@ export function SidebarNav() {
 
   return (
     <TooltipProvider>
-      <nav className="sticky bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
+      <nav className="sticky bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border/20 shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
         <div className="flex justify-around items-center h-20 px-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
@@ -95,7 +95,7 @@ export function SidebarNav() {
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
                   <Link href={item.href} className={cn(
-                        "relative flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground",
+                        "relative flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground border-none",
                         isActive ? activeNeumorphicButton : neumorphicButton,
                         isActive && 'text-primary'
                       )}>

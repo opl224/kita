@@ -32,7 +32,7 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8";
+const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
@@ -194,7 +194,7 @@ export default function ProfilePage() {
       <Card className={neumorphicCardStyle}>
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
-            <Avatar className="h-32 w-32 border-4 border-background shadow-neumorphic-outset">
+            <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none">
               <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover" />
               <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>

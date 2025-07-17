@@ -426,7 +426,7 @@ const startRecording = async () => {
                            )}
                            <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
                                 {!isSender && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
-                                <Card className={`p-2 rounded-xl ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
+                                <Card className={`p-2 rounded-xl border-none ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
                                     <AudioPlayer src={msg.audioUrl} />
                                 </Card>
                                 <div className="flex items-center gap-2 mt-1 px-2">

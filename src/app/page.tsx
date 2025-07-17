@@ -126,7 +126,7 @@ export default function Home() {
     }
   };
 
-  const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300";
+  const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
   
   if (loading) {
@@ -144,7 +144,7 @@ export default function Home() {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-             <Avatar className="h-16 w-16 border-2 border-background shadow-neumorphic-outset cursor-pointer">
+             <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none">
               <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover" />
               <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
@@ -157,7 +157,7 @@ export default function Home() {
       </header>
       
       <main className="flex flex-col gap-8">
-        <Card className={`${neumorphicInsetStyle} p-6`}>
+        <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
             <div className="flex items-center justify-between gap-4 text-primary">
               <div className="flex items-center gap-4">
                 <DollarSign className="h-8 w-8" />
@@ -186,7 +186,7 @@ export default function Home() {
                   <div className="space-y-4">
                       {allUsers.map((u) => (
                           <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
-                              <Avatar className="h-10 w-10">
+                              <Avatar className="h-10 w-10 border-none">
                                   <AvatarImage src={u.avatarUrl} alt={u.displayName} />
                                   <AvatarFallback>{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                               </Avatar>
