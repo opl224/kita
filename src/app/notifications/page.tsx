@@ -4,7 +4,8 @@
 import { Card } from "@/components/ui/card";
 import { Bell, Coins } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getFirestore, collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -18,7 +19,25 @@ type Notification = {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribeAuth();
+  }, [auth]);
+
+  useEffect(() => {
+    if (user) {
+      const userDocRef = doc(db, "users", user.uid);
+      updateDoc(userDocRef, {
+        lastSeenNotifications: serverTimestamp()
+      }).catch(err => console.error("Error updating last seen notifications:", err));
+    }
+  }, [user, db]);
 
   useEffect(() => {
     const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
@@ -66,7 +85,7 @@ export default function NotificationsPage() {
                            <div className="flex-1">
                                <p className="text-foreground">{notif.message}</p>
                                <p className="text-xs text-muted-foreground mt-1">
-                                   {notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}
+                                   {notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
                                </p>
                            </div>
                         </div>
@@ -78,5 +97,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
-    

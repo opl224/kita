@@ -7,7 +7,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState } from 'react';
-import { getFirestore, collection, onSnapshot, query } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -37,12 +37,30 @@ export function SidebarNav() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(collection(db, "notifications"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      setNotificationCount(querySnapshot.size);
+    let unsubscribeNotifications: () => void;
+
+    const userDocRef = doc(db, "users", user.uid);
+    getDoc(userDocRef).then(userSnap => {
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const lastSeen = userData.lastSeenNotifications || new Date(0);
+            
+            const q = query(
+                collection(db, "notifications"),
+                where("createdAt", ">", lastSeen)
+            );
+    
+            unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
+              setNotificationCount(querySnapshot.size);
+            });
+        }
     });
 
-    return () => unsubscribe();
+    return () => {
+        if (unsubscribeNotifications) {
+            unsubscribeNotifications();
+        }
+    };
   }, [db, user]);
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";

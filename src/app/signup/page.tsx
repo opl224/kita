@@ -7,7 +7,7 @@ import { z } from "zod";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 
 
@@ -65,9 +65,10 @@ export default function SignupPage() {
         uid: user.uid,
         displayName: data.displayName,
         email: user.email,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
         moneyCollected: 0,
-        avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`
+        avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`,
+        lastSeenNotifications: new Date(0),
       });
 
       toast({
