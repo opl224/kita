@@ -29,8 +29,7 @@ export function SidebarNav() {
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
-                  <Link href={item.href} legacyBehavior passHref>
-                    <a className={cn(
+                  <Link href={item.href} className={cn(
                         "flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground",
                         isActive ? activeNeumorphicButton : neumorphicButton,
                         isActive && 'text-primary'
@@ -42,7 +41,6 @@ export function SidebarNav() {
                       )}>
                         {item.label}
                       </span>
-                    </a>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="top" className={cn(isActive && 'hidden')}>
