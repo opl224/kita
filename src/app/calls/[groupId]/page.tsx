@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Mic, UserPlus, Square, Play, Pause } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, type Locale } from 'date-fns/locale';
 
 type Message = {
     id: string;
@@ -32,48 +32,6 @@ type GroupInfo = {
 }
 
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
-
-// Helper function to create a WAV file from raw PCM data.
-const createWavFile = (audioBuffer: ArrayBuffer, sampleRate: number): Blob => {
-    const pcmData = new Float32Array(audioBuffer);
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcmData.length * (bitsPerSample / 8);
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-
-    let offset = 0;
-    const writeString = (str: string) => {
-        for (let i = 0; i < str.length; i++) {
-            view.setUint8(offset++, str.charCodeAt(i));
-        }
-    };
-    
-    writeString('RIFF');
-    view.setUint32(offset, 36 + dataSize, true); offset += 4;
-    writeString('WAVE');
-    writeString('fmt ');
-    view.setUint32(offset, 16, true); offset += 4;
-    view.setUint16(offset, 1, true); offset += 2; // Audio format 1 for PCM
-    view.setUint16(offset, numChannels, true); offset += 2;
-    view.setUint32(offset, sampleRate, true); offset += 4;
-    view.setUint32(offset, byteRate, true); offset += 4;
-    view.setUint16(offset, blockAlign, true); offset += 2;
-    view.setUint16(offset, bitsPerSample, true); offset += 2;
-    writeString('data');
-    view.setUint32(offset, dataSize, true); offset += 4;
-
-    for (let i = 0; i < pcmData.length; i++) {
-        const s = Math.max(-1, Math.min(1, pcmData[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        offset += 2;
-    }
-
-    return new Blob([view], { type: 'audio/wav' });
-};
-
 
 const AudioPlayer = ({ src }: { src: string }) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -243,7 +201,7 @@ export default function GroupChatPage() {
         try {
             const base64data = await blobToBase64(audioBlob);
 
-            if (!base64data || !base64data.startsWith('data:audio/wav')) {
+            if (!base64data) {
                 toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
                 return;
             }
@@ -282,7 +240,6 @@ const startRecording = async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Use a standard MIME type that gives raw audio data
         const options = { mimeType: 'audio/webm' }; 
         
         const workerUrl = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js';
@@ -328,18 +285,7 @@ const startRecording = async () => {
 
             if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                const audioContext = new AudioContext({ sampleRate: 48000 });
-                
-                try {
-                    const arrayBuffer = await audioBlob.arrayBuffer();
-                    const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                    const pcmData = decodedBuffer.getChannelData(0);
-                    const wavBlob = createWavFile(pcmData, decodedBuffer.sampleRate);
-                    sendVoiceNote(wavBlob, finalDuration);
-                } catch(e) {
-                    console.error("Error processing audio: ", e);
-                    toast({title: "Gagal Proses Audio", description: "Tidak dapat memproses rekaman suara.", variant: "destructive"});
-                }
+                sendVoiceNote(audioBlob, finalDuration);
             }
             audioChunksRef.current = [];
         };
