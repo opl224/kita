@@ -1,10 +1,38 @@
+
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, DollarSign, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { app } from "@/lib/firebase";
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [auth, db]);
+
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
   
@@ -32,18 +60,22 @@ export default function Home() {
     },
   ];
 
+  if (loading) {
+    return <div>Memuat...</div>;
+  }
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
       <header className="flex justify-between items-center">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
           <h1 className="text-3xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-            User Ling
+            {userData?.displayName || 'Pengguna'}
           </h1>
         </div>
         <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
-          <AvatarImage src="https://placehold.co/100x100.png" alt="Avatar Pengguna" data-ai-hint="user avatar" />
-          <AvatarFallback>UL</AvatarFallback>
+          <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" />
+          <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
       </header>
       
@@ -53,7 +85,9 @@ export default function Home() {
               <DollarSign className="h-8 w-8" />
               <div className="flex flex-col">
                 <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
-                <span className="text-3xl font-bold text-foreground">Rp 1.234.567</span>
+                <span className="text-3xl font-bold text-foreground">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData?.moneyCollected || 0)}
+                </span>
               </div>
             </div>
         </Card>
@@ -104,3 +138,4 @@ export default function Home() {
     </div>
   );
 }
+

@@ -1,11 +1,14 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { getAuth, signOut } from "firebase/auth";
+import { getAuth, signOut, onAuthStateChanged, User, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
+import { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,7 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, LogOut } from "lucide-react";
+import { Camera, LogOut, Loader } from "lucide-react";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Nama tampilan minimal 2 karakter."),
@@ -35,23 +38,68 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = getAuth(app);
-  
+  const db = getFirestore(app);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      displayName: "User Ling",
-      email: "user.ling@example.com",
+      displayName: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
     mode: "onChange",
   });
 
-  function onSubmit(data: ProfileFormValues) {
-    toast({
-      title: "Profil Diperbarui",
-      description: "Informasi profil Anda telah berhasil disimpan.",
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          form.reset({
+            displayName: userData.displayName,
+            email: userData.email,
+          });
+        }
+      } else {
+        router.push('/login');
+      }
+      setLoading(false);
     });
+    return () => unsubscribe();
+  }, [auth, db, router, form]);
+
+
+  async function onSubmit(data: ProfileFormValues) {
+    if (!user) return;
+    
+    try {
+        if(data.displayName !== user.displayName) {
+            await setDoc(doc(db, "users", user.uid), { displayName: data.displayName }, { merge: true });
+        }
+        
+        if (data.password) {
+            // Re-authentication is often needed for sensitive operations like changing a password.
+            // This is a simplified version. For a real app, you'd prompt for the *current* password.
+            await updatePassword(user, data.password);
+        }
+
+        toast({
+            title: "Profil Diperbarui",
+            description: "Informasi profil Anda telah berhasil disimpan.",
+        });
+    } catch(error) {
+        toast({
+            title: "Gagal Memperbarui Profil",
+            description: "Terjadi kesalahan saat menyimpan perubahan.",
+            variant: "destructive",
+        });
+    }
   }
 
   async function handleLogout() {
@@ -61,7 +109,7 @@ export default function ProfilePage() {
         title: "Berhasil Keluar",
         description: "Anda telah berhasil keluar dari akun Anda.",
       });
-      router.push('/');
+      router.push('/login');
     } catch (error) {
       toast({
         title: "Gagal Keluar",
@@ -69,6 +117,10 @@ export default function ProfilePage() {
         variant: "destructive",
       });
     }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen"><Loader className="h-12 w-12 animate-spin"/></div>
   }
 
   return (
@@ -84,15 +136,15 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-background shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626]">
-              <AvatarImage src="https://placehold.co/128x128.png" alt="User Avatar" data-ai-hint="user avatar" />
-              <AvatarFallback>UL</AvatarFallback>
+              <AvatarImage src={form.getValues('displayName') ? `https://placehold.co/128x128.png?text=${form.getValues('displayName').charAt(0)}` : ''} alt="User Avatar" data-ai-hint="user avatar" />
+              <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <Button size="icon" className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary text-primary-foreground`}>
                 <Camera className="h-5 w-5"/>
                 <span className="sr-only">Ubah Avatar</span>
             </Button>
           </div>
-          <h2 className="text-2xl font-headline font-semibold text-foreground">User Ling</h2>
+          <h2 className="text-2xl font-headline font-semibold text-foreground">{form.getValues('displayName')}</h2>
         </div>
 
         <Form {...form}>
@@ -130,7 +182,7 @@ export default function ProfilePage() {
                 <FormItem>
                   <FormLabel className="text-muted-foreground">Kata Sandi Baru</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
+                    <Input type="password" placeholder="•••••••• (kosongkan jika tidak berubah)" {...field} className={neumorphicInputStyle} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

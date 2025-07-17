@@ -1,11 +1,15 @@
+
 'use client';
 
-import React, { useState, TouchEvent } from 'react';
+import React, { useState, TouchEvent, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Smartphone } from 'lucide-react';
+import { Smartphone, Loader } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import LoginPage from '@/app/login/page';
 
 const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
 
@@ -15,6 +19,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth(app);
+  
+  const authRequiredRoutes = ['/', '/calls', '/notifications', '/profile'];
+  const isAuthRequired = authRequiredRoutes.includes(pathname);
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      if (!currentUser && isAuthRequired) {
+        router.push('/login');
+      }
+      if(currentUser && isAuthPage){
+        router.push('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, router, isAuthRequired, isAuthPage, pathname]);
 
   const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null);
@@ -26,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || !isAuthRequired) return;
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > SWIPE_THRESHOLD;
     const isRightSwipe = distance < -SWIPE_THRESHOLD;
@@ -34,12 +61,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const currentIndex = menuItems.findIndex((item) => item.href === pathname);
     
     if (isLeftSwipe) {
-      // Swipe ke kiri, navigasi ke halaman berikutnya
       if (currentIndex < menuItems.length - 1) {
         router.push(menuItems[currentIndex + 1].href);
       }
     } else if (isRightSwipe) {
-      // Swipe ke kanan, navigasi ke halaman sebelumnya
       if (currentIndex > 0) {
         router.push(menuItems[currentIndex - 1].href);
       }
@@ -49,8 +74,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setTouchEnd(null);
   };
 
-  if (isMobile === undefined) {
-    return null; // Atau tampilkan pemuat
+  if (loading || isMobile === undefined) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
+            <Loader className="h-24 w-24 animate-spin text-primary" />
+        </div>
+    )
   }
 
   if (!isMobile) {
@@ -68,6 +97,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  if (!user && isAuthRequired) {
+    return <LoginPage />;
+  }
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
 
   return (
     <div 
