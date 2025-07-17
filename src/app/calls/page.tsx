@@ -19,6 +19,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useRouter } from "next/navigation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const groupFormSchema = z.object({
   name: z.string().min(3, "Nama grup minimal 3 karakter."),
@@ -31,7 +33,7 @@ type Group = {
   name: string;
   members: any[];
   lastMessage?: string;
-  lastMessageTime?: string;
+  lastMessageTime?: any;
   createdBy: string;
 };
 
@@ -77,7 +79,6 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setIsSuperUser(false);
         }
-        // Set loading to false once auth state is determined
         setLoading(false);
     });
 
@@ -85,13 +86,11 @@ export default function VoiceNoteGroupsPage() {
   }, [auth]);
 
   useEffect(() => {
-    // Only fetch groups if a user is logged in.
     if (!user) {
         setGroups([]);
         return;
     }
     
-    // Set a listener for real-time group updates.
     const groupsCollection = collection(db, 'groups');
     const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
 
@@ -102,7 +101,6 @@ export default function VoiceNoteGroupsPage() {
         
         if (allMemberIds.length > 0) {
             const usersCollection = collection(db, 'users');
-            // Firestore 'in' query supports a maximum of 30 elements in the array.
             const userChunks: string[][] = [];
             for (let i = 0; i < allMemberIds.length; i += 30) {
               userChunks.push(allMemberIds.slice(i, i + 30));
@@ -136,7 +134,6 @@ export default function VoiceNoteGroupsPage() {
       });
     });
 
-    // Cleanup the listener when the component unmounts or the user changes.
     return () => unsubscribeGroups();
 
   }, [db, user, toast]);
@@ -145,7 +142,6 @@ export default function VoiceNoteGroupsPage() {
     if (!user) return;
     try {
         if (editingGroup) {
-            // Edit existing group
             const groupRef = doc(db, 'groups', editingGroup.id);
             await updateDoc(groupRef, { name: data.name });
             toast({
@@ -154,7 +150,6 @@ export default function VoiceNoteGroupsPage() {
             });
             setEditingGroup(null);
         } else {
-            // Create new group
             const groupsCollection = collection(db, 'groups');
             await addDoc(groupsCollection, {
                 name: data.name,
@@ -184,9 +179,6 @@ export default function VoiceNoteGroupsPage() {
     if (!deletingGroup) return;
 
     try {
-      // NOTE: This now only deletes the group document.
-      // Deleting the messages subcollection should ideally be handled by a Firebase Function
-      // triggered on document delete to prevent orphaned data and avoid client-side permission issues.
       await deleteDoc(doc(db, 'groups', deletingGroup.id));
 
       toast({
@@ -293,7 +285,11 @@ export default function VoiceNoteGroupsPage() {
               <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
                   <MessageCircle className="h-4 w-4 flex-shrink-0"/>
                   <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
-                  <span className="text-xs shrink-0">{group.lastMessageTime || ""}</span>
+                  <span className="text-xs shrink-0">
+                    {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
+                        ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: true, locale: id })
+                        : group.lastMessageTime || ""}
+                  </span>
               </div>
             </div>
           </Card>
