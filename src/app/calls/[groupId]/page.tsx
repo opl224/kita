@@ -264,20 +264,8 @@ export default function GroupChatPage() {
         setInvitingUsers(prev => new Set(prev).add(invitedUser.id));
 
         try {
-            // Check if an invitation already exists
             const invitationsRef = collection(db, 'invitations');
-            const q = query(invitationsRef, 
-                where('groupId', '==', groupId), 
-                where('userId', '==', invitedUser.id),
-                where('status', '==', 'pending')
-            );
-            const existingInvitation = await getDocs(q);
-
-            if (!existingInvitation.empty) {
-                toast({ title: "Undangan Sudah Ada", description: `${invitedUser.displayName} sudah diundang ke grup ini.`, variant: "default" });
-                return;
-            }
-
+            
             await addDoc(invitationsRef, {
                 groupId: groupId,
                 groupName: groupInfo.name,
@@ -607,5 +595,3 @@ const startRecording = async () => {
         </div>
     );
 }
-
-    
