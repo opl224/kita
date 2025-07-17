@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, UserPlus, Square } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Play, Pause } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -83,6 +83,65 @@ const createWavFile = (pcmData: Float32Array, sampleRate: number): Blob => {
     }
 
     return new Blob([buffer], { type: 'audio/wav' });
+};
+
+const AudioPlayer = ({ src }: { src: string }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+        if (!audioRef.current) return;
+        
+        const audio = audioRef.current;
+        const handleEnded = () => setIsPlaying(false);
+        
+        audio.addEventListener('ended', handleEnded);
+
+        // Preload the audio
+        if (src) {
+            audio.src = src;
+            audio.load();
+        }
+
+        return () => {
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, [src]);
+
+    const togglePlay = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    const waveformBars = [4, 8, 12, 16, 20, 24, 20, 16, 12, 8, 12, 16, 20, 24, 20, 16, 12, 16, 20, 24, 20, 16, 12, 8, 4];
+
+    return (
+        <div className="flex items-center gap-3">
+            <audio ref={audioRef} preload="metadata" />
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-primary/20 text-primary-foreground flex-shrink-0"
+            >
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <div className="flex items-center gap-1 h-8 w-[150px]">
+                 {waveformBars.map((height, i) => (
+                    <div
+                        key={i}
+                        className="w-1 bg-primary/50 rounded-full"
+                        style={{ height: `${height}px` }}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 };
 
 
@@ -346,7 +405,7 @@ const startRecording = async () => {
                        <div className={`flex flex-col max-w-[75%] ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}>
                             {msg.senderId !== user?.uid && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
                             <Card className={`p-2 rounded-xl ${msg.senderId === user?.uid ? 'bg-primary/20' : 'bg-muted'}`}>
-                                <audio controls src={msg.audioUrl} className="w-full h-10" />
+                                <AudioPlayer src={msg.audioUrl} />
                             </Card>
                             <div className="flex items-center gap-2 mt-1 px-2">
                                 <p className="text-xs text-muted-foreground">
