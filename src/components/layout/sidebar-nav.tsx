@@ -41,11 +41,6 @@ export function SidebarNav() {
       return;
     }
 
-    if (pathname === '/notifications') {
-      setTotalUnseenCount(0);
-      return;
-    }
-
     const userDocRef = doc(db, 'users', user.uid);
 
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
@@ -89,7 +84,7 @@ export function SidebarNav() {
     return () => {
       unsubscribeUser();
     };
-  }, [db, user, pathname]);
+  }, [db, user]);
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
@@ -102,7 +97,7 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const isNotificationItem = item.notificationKey === 'notifications';
-            const hasNotification = isNotificationItem && totalUnseenCount > 0;
+            const hasNotification = isNotificationItem && totalUnseenCount > 0 && pathname !== '/notifications';
 
             return (
               <Tooltip key={item.href}>
