@@ -32,6 +32,7 @@ type Group = {
   members: any[];
   lastMessage?: string;
   lastMessageTime?: string;
+  createdBy: string;
 };
 
 
@@ -76,15 +77,16 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setIsSuperUser(false);
         }
-        setLoading(false);
     });
 
     return () => unsubscribeAuth();
   }, [auth]);
 
   useEffect(() => {
+    setLoading(true);
     if (!user) {
         setGroups([]); // Clear groups if user logs out
+        setLoading(false);
         return;
     }; 
 
@@ -124,6 +126,7 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setGroups(groupList);
         }
+        setLoading(false);
     });
 
     return () => unsubscribeGroups();
@@ -173,28 +176,24 @@ export default function VoiceNoteGroupsPage() {
     if (!deletingGroup) return;
 
     try {
-      const groupRef = doc(db, 'groups', deletingGroup.id);
-      const messagesRef = collection(db, 'groups', deletingGroup.id, 'messages');
-      const messagesSnapshot = await getDocs(messagesRef);
-      
-      const batch = writeBatch(db);
-      
-      messagesSnapshot.forEach(doc => {
-          batch.delete(doc.ref);
-      });
-      batch.delete(groupRef);
-      
-      await batch.commit();
+      // NOTE: This now only deletes the group document.
+      // Deleting the messages subcollection should ideally be handled by a Firebase Function
+      // triggered on document delete to prevent orphaned data and avoid client-side permission issues.
+      await deleteDoc(doc(db, 'groups', deletingGroup.id));
 
       toast({
         title: "Grup Dihapus",
-        description: `Grup "${deletingGroup.name}" dan semua pesannya telah dihapus.`,
+        description: `Grup "${deletingGroup.name}" telah dihapus.`,
       });
     } catch (error) {
       console.error("Error deleting group:", error);
+      let description = "Terjadi kesalahan saat menghapus grup.";
+      if (error instanceof Error && (error as any).code === 'permission-denied') {
+          description = "Anda tidak memiliki izin untuk menghapus grup ini.";
+      }
       toast({
         title: "Gagal Menghapus Grup",
-        description: "Terjadi kesalahan saat menghapus grup.",
+        description: description,
         variant: "destructive",
       });
     } finally {
@@ -222,15 +221,19 @@ export default function VoiceNoteGroupsPage() {
 
       <main className="space-y-6">
         {groups.map(group => (
-          <Card key={group.id} className={neumorphicCardStyle}>
+          <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
-                {isSuperUser && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingGroup(group)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                 {(isSuperUser || user?.uid === group.createdBy) && (
+                  <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
+                    <Dialog open={editingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingGroup(group)}>
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                    </Dialog>
                     <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
                       <AlertDialogTrigger asChild>
                           <Button 
@@ -261,10 +264,10 @@ export default function VoiceNoteGroupsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center -space-x-2">
-                    {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
-                      <Avatar key={member.uid} className="h-10 w-10 border-2 border-background">
-                        <AvatarImage src={member.avatarUrl} alt={member.displayName} className="object-cover"/>
-                        <AvatarFallback>{member.displayName?.charAt(0) || '?'}</AvatarFallback>
+                    {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any, index: number) => (
+                      <Avatar key={member?.uid || index} className="h-10 w-10 border-2 border-background">
+                        <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
+                        <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
                     )) : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">?</div>}
                      {group.members && group.members.length > 5 && (
@@ -359,5 +362,3 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
-
-    
