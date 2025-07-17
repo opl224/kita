@@ -64,7 +64,7 @@ export default function LoginPage() {
         <Card className={neumorphicCardStyle}>
             <div className="flex flex-col items-center gap-4 mb-8">
                 <VoiceLinkLogo className="h-16 w-16 text-primary"/>
-                <h1 className="text-3xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+                <h1 className="text-3xl font-headline font-bold text-foreground">
                     Masuk ke VoiceLink
                 </h1>
                 <p className="text-muted-foreground text-center">Masukkan detail Anda untuk melanjutkan.</p>
@@ -97,7 +97,7 @@ export default function LoginPage() {
                     </FormItem>
                 )}
                 />
-                <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full bg-primary text-primary-foreground`}>
+                <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full`}>
                     Masuk
                 </Button>
             </form>

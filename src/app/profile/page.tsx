@@ -184,6 +184,7 @@ export default function ProfilePage() {
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
         >
           <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -194,9 +195,9 @@ export default function ProfilePage() {
       <Card className={neumorphicCardStyle}>
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
-            <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none">
-              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover" />
-              <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
+            <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
+              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
+              <AvatarFallback className="rounded-full">{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <input 
                 type="file" 
@@ -207,7 +208,7 @@ export default function ProfilePage() {
             />
             <Button 
                 size="icon" 
-                className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary text-primary-foreground`}
+                className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full`}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
             >
@@ -273,7 +274,7 @@ export default function ProfilePage() {
               )}
             />
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button type="submit" variant="default" className={`${neumorphicButtonStyle} flex-1 bg-primary text-primary-foreground`}>
+              <Button type="submit" variant="default" className={`${neumorphicButtonStyle} flex-1`}>
                 Simpan Perubahan
               </Button>
               <Button type="button" variant="secondary" onClick={handleLogout} className={`${neumorphicButtonStyle} flex-1`}>

@@ -42,7 +42,6 @@ export function SidebarNav() {
 
     const userDocRef = doc(db, "users", user.uid);
 
-    // Listen for real-time updates on the user document
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
         let unsubscribeNotifications: (() => void) | undefined;
 
@@ -55,7 +54,6 @@ export function SidebarNav() {
                 where("createdAt", ">", lastSeen)
             );
     
-            // Set up a new notification listener based on the updated lastSeen time
             unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
               setNotificationCount(querySnapshot.size);
             }, (error) => {
@@ -64,7 +62,6 @@ export function SidebarNav() {
             });
         }
 
-        // Return a cleanup function for the notifications listener
         return () => {
             if (unsubscribeNotifications) {
                 unsubscribeNotifications();
@@ -74,7 +71,6 @@ export function SidebarNav() {
         console.error("Error fetching user data:", error);
     });
 
-    // Main cleanup function for the user listener
     return () => {
         unsubscribeUser();
     };
@@ -86,7 +82,7 @@ export function SidebarNav() {
 
   return (
     <TooltipProvider>
-      <nav className="sticky bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border/20 shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
+      <nav className="sticky bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
         <div className="flex justify-around items-center h-20 px-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;

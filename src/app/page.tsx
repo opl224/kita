@@ -138,15 +138,15 @@ export default function Home() {
       <header className="flex justify-between items-center">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
-          <h1 className="text-3xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+          <h1 className="text-3xl font-headline font-bold text-foreground">
             {userData?.displayName || 'Pengguna'} {isSuperUser && "👑"}
           </h1>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-             <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none">
-              <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover" />
-              <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+             <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none rounded-full">
+              <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover rounded-full" />
+              <AvatarFallback className="rounded-full">{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
           </DialogTrigger>
           <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
@@ -185,10 +185,10 @@ export default function Home() {
               <CardContent className="p-0">
                   <div className="space-y-4">
                       {allUsers.map((u) => (
-                          <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
-                              <Avatar className="h-10 w-10 border-none">
-                                  <AvatarImage src={u.avatarUrl} alt={u.displayName} />
-                                  <AvatarFallback>{u.displayName?.charAt(0) || '?'}</AvatarFallback>
+                          <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                              <Avatar className="h-10 w-10 border-none rounded-full">
+                                  <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
+                                  <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
                                   <p className="font-semibold text-foreground">{u.displayName}</p>
@@ -237,5 +237,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
