@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MessageCircle, ArrowRight, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ const groupFormSchema = z.object({
 
 type GroupFormValues = z.infer<typeof groupFormSchema>;
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6";
+const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6 cursor-pointer hover:shadow-[8px_8px_16px_#0d0d0d,-8px_-8px_16px_#262626]";
 
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -55,7 +55,27 @@ export default function VoiceNoteGroupsPage() {
         const groupsCollection = collection(db, 'groups');
         const groupSnapshot = await getDocs(groupsCollection);
         const groupList = groupSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setGroups(groupList);
+
+        // Fetch user data for members
+        const allMemberIds = [...new Set(groupList.flatMap(g => g.members))];
+        if (allMemberIds.length > 0) {
+            const usersCollection = collection(db, 'users');
+            const usersQuery = query(usersCollection, where(documentId(), 'in', allMemberIds));
+            const usersSnapshot = await getDocs(usersQuery);
+            const usersData = usersSnapshot.docs.reduce((acc, doc) => {
+                acc[doc.id] = doc.data();
+                return acc;
+            }, {} as any);
+
+            const populatedGroups = groupList.map(group => ({
+                ...group,
+                members: group.members.map((memberId: string) => usersData[memberId]).filter(Boolean),
+            }));
+            setGroups(populatedGroups);
+        } else {
+            setGroups(groupList);
+        }
+
       }
       setLoading(false);
     });
@@ -69,7 +89,7 @@ export default function VoiceNoteGroupsPage() {
       const groupsCollection = collection(db, 'groups');
       const newGroupDoc = await addDoc(groupsCollection, {
         name: data.name,
-        members: [], // Start with an empty member list
+        members: [], 
         createdAt: serverTimestamp(),
         createdBy: user.uid,
       });
@@ -95,6 +115,11 @@ export default function VoiceNoteGroupsPage() {
     }
   };
 
+  const handleGroupClick = (groupId: string) => {
+    router.push(`/calls/${groupId}`);
+  };
+
+
   if (loading) {
     return <div>Memuat grup...</div>
   }
@@ -110,7 +135,7 @@ export default function VoiceNoteGroupsPage() {
 
       <main className="space-y-6">
         {groups.map(group => (
-          <Card key={group.id} className={neumorphicCardStyle}>
+          <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-start">
                   <div>
@@ -118,16 +143,16 @@ export default function VoiceNoteGroupsPage() {
                       <div className="flex items-center -space-x-2 mt-2">
                         {group.members && group.members.length > 0 ? group.members.map((member: any) => (
                           <Avatar key={member.uid} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={member.avatarUrl} alt={member.displayName} />
-                            <AvatarFallback>{member.displayName.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={member.avatarUrl} alt={member.displayName} className="object-cover"/>
+                            <AvatarFallback>{member.displayName?.charAt(0) || '?'}</AvatarFallback>
                           </Avatar>
                         )) : <p className="text-xs text-muted-foreground">Belum ada anggota</p>}
                       </div>
                   </div>
-                   <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+                   <div className="text-primary opacity-50">
                       <ArrowRight className="h-6 w-6" />
                       <span className="sr-only">Masuk Grup</span>
-                   </Button>
+                   </div>
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
                     <MessageCircle className="h-4 w-4"/>
