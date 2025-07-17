@@ -4,12 +4,13 @@
 import React, { useState, TouchEvent, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Smartphone, Loader } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import LoginPage from '@/app/login/page';
+import { CustomLoader } from './loader';
 
 const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
 
@@ -76,11 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   if (loading || isMobile === undefined) {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
-            <Loader className="h-24 w-24 animate-spin text-primary" />
-        </div>
-    )
+    return <CustomLoader />;
   }
 
   if (!isMobile) {
