@@ -2,12 +2,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState } from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -21,6 +21,7 @@ export const menuItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const db = getFirestore(app);
@@ -55,7 +56,12 @@ export function SidebarNav() {
             );
     
             unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
-              setNotificationCount(querySnapshot.size);
+              // Only update count if not on the notifications page already
+              if (pathname !== '/notifications') {
+                setNotificationCount(querySnapshot.size);
+              } else {
+                setNotificationCount(0);
+              }
             }, (error) => {
                 console.error("Error fetching notifications:", error);
                 setNotificationCount(0);
@@ -74,7 +80,28 @@ export function SidebarNav() {
     return () => {
         unsubscribeUser();
     };
-  }, [db, user]);
+  }, [db, user, pathname]);
+
+  const handleNotificationClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (!user) {
+      router.push('/notifications');
+      return;
+    }
+
+    // Optimistic UI update
+    setNotificationCount(0);
+    
+    // Update Firestore in the background
+    const userDocRef = doc(db, "users", user.uid);
+    updateDoc(userDocRef, {
+      lastSeenNotifications: serverTimestamp()
+    }).catch(err => console.error("Error updating last seen notifications:", err));
+
+    // Navigate to the page
+    router.push('/notifications');
+  };
+
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
@@ -86,11 +113,17 @@ export function SidebarNav() {
         <div className="flex justify-around items-center h-20 px-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
-            const hasNotification = item.notificationKey === 'notifications' && notificationCount > 0;
+            const isNotificationItem = item.notificationKey === 'notifications';
+            const hasNotification = isNotificationItem && notificationCount > 0;
+            
+            const linkProps = isNotificationItem 
+                ? { onClick: handleNotificationClick } 
+                : {};
+
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
-                  <Link href={item.href} className={cn(
+                  <Link href={item.href} {...linkProps} className={cn(
                         "relative flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground border-none",
                         isActive ? activeNeumorphicButton : neumorphicButton,
                         isActive && 'text-primary'

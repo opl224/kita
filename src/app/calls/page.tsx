@@ -202,7 +202,6 @@ export default function VoiceNoteGroupsPage() {
         <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Pesan Suara Grup
         </h1>
-        <p className="text-muted-foreground mt-1">Dengarkan dan kirim pesan suara ke grup Anda.</p>
       </header>
 
       <main className="space-y-6">
