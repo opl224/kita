@@ -40,8 +40,9 @@ export function SidebarNav() {
       <SidebarMenu className="flex-1 px-2 py-4">
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} legacyBehavior passHref>
+            <Link href={item.href} passHref>
               <SidebarMenuButton
+                asChild
                 className={cn(
                   'w-full justify-start transition-all duration-200 rounded-lg hover:bg-transparent',
                   pathname === item.href ? activeNeumorphicButton : neumorphicButton
@@ -51,8 +52,10 @@ export function SidebarNav() {
                 isActive={pathname === item.href}
                 tooltip={item.tooltip}
               >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
+                <a>
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -61,8 +64,9 @@ export function SidebarNav() {
       
       <SidebarFooter className="p-2">
         <SidebarSeparator className="my-2 bg-border" />
-        <Link href="/profile" legacyBehavior passHref>
+        <Link href="/profile" passHref>
           <SidebarMenuButton
+            asChild
             className={cn(
               'w-full justify-start transition-all duration-200 rounded-lg h-auto p-2 hover:bg-muted',
               pathname === '/profile' && 'bg-muted'
@@ -71,14 +75,16 @@ export function SidebarNav() {
             isActive={pathname === '/profile'}
             tooltip="Profile"
           >
-            <Avatar className="h-10 w-10 shadow-[2px_2px_4px_#0d0d0d,-2px_-2px_4px_#262626]">
-                <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="user avatar" />
-                <AvatarFallback>UL</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col items-start">
-                <span className="font-headline font-semibold text-foreground">User Ling</span>
-                <span className="text-sm text-muted-foreground">Lihat Profil</span>
-            </div>
+            <a>
+              <Avatar className="h-10 w-10 shadow-[2px_2px_4px_#0d0d0d,-2px_-2px_4px_#262626]">
+                  <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="user avatar" />
+                  <AvatarFallback>UL</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col items-start">
+                  <span className="font-headline font-semibold text-foreground">User Ling</span>
+                  <span className="text-sm text-muted-foreground">Lihat Profil</span>
+              </div>
+            </a>
           </SidebarMenuButton>
         </Link>
       </SidebarFooter>

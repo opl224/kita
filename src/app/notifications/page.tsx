@@ -72,8 +72,8 @@ export default function NotificationsPage() {
 
       <main className="space-y-4">
         {allNotifications.map((notif) => (
-            <Card key={notif.id} className="bg-transparent border-none p-0">
-                <Link href={notif.link} className="block">
+            <Link key={notif.id} href={notif.link} className="block">
+                <Card className="bg-transparent border-none p-0">
                     <div className={`${neumorphicCardStyle} hover:shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] group`}>
                         <div className="flex items-center gap-4">
                             <div className={`${neumorphicIconContainer} group-hover:scale-110 transition-transform`}>
@@ -92,8 +92,8 @@ export default function NotificationsPage() {
                             </div>
                         </div>
                     </div>
-                </Link>
-            </Card>
+                </Card>
+            </Link>
         ))}
       </main>
     </div>
