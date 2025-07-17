@@ -152,6 +152,21 @@ export default function GroupChatPage() {
     const db = getFirestore(app);
     const { toast } = useToast();
 
+    // Custom locale for date-fns to remove "kurang dari"
+    const customLocale: Locale = {
+        ...id,
+        formatDistance: (token, count, options) => {
+            if (token === 'lessThanXMinutes') {
+                if (count === 1) return 'baru saja';
+            }
+             if (token === 'lessThanXSeconds') {
+                if (count === 1) return 'baru saja';
+            }
+            return id.formatDistance!(token, count, options);
+        },
+    };
+
+
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (!currentUser) {
@@ -252,7 +267,7 @@ export default function GroupChatPage() {
 
             await updateDoc(doc(db, 'groups', groupId), {
                 lastMessage: `Pesan suara (${formatTime(duration)})`,
-                lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
+                lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: false, locale: customLocale })
             });
             
         } catch (error) {
@@ -390,7 +405,7 @@ const startRecording = async () => {
                             </Card>
                             <div className="flex items-center gap-2 mt-1 px-2">
                                 <p className="text-xs text-muted-foreground">
-                                    {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}
+                                    {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                     {formatTime(msg.duration || 0)}
