@@ -77,19 +77,21 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setIsSuperUser(false);
         }
+        // Set loading to false once auth state is determined
+        setLoading(false);
     });
 
     return () => unsubscribeAuth();
   }, [auth]);
 
   useEffect(() => {
+    // Only fetch groups if a user is logged in.
     if (!user) {
         setGroups([]);
-        setLoading(false);
         return;
     }
-    setLoading(true);
-
+    
+    // Set a listener for real-time group updates.
     const groupsCollection = collection(db, 'groups');
     const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
 
@@ -101,7 +103,6 @@ export default function VoiceNoteGroupsPage() {
         if (allMemberIds.length > 0) {
             const usersCollection = collection(db, 'users');
             // Firestore 'in' query supports a maximum of 30 elements in the array.
-            // For larger member lists, you might need to chunk the requests.
             const userChunks: string[][] = [];
             for (let i = 0; i < allMemberIds.length; i += 30) {
               userChunks.push(allMemberIds.slice(i, i + 30));
@@ -126,12 +127,19 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setGroups(groupList);
         }
-        setLoading(false);
+    }, (error) => {
+      console.error("Error fetching groups:", error);
+      toast({
+        title: "Gagal memuat grup",
+        description: "Terjadi kesalahan perizinan saat mengambil data.",
+        variant: "destructive"
+      });
     });
 
+    // Cleanup the listener when the component unmounts or the user changes.
     return () => unsubscribeGroups();
 
-  }, [db, user]);
+  }, [db, user, toast]);
 
   const onGroupSubmit = async (data: GroupFormValues) => {
     if (!user) return;
@@ -208,7 +216,7 @@ export default function VoiceNoteGroupsPage() {
 
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Memuat grup...</div>
+    return <div className="flex items-center justify-center h-screen">Memuat...</div>
   }
 
   return (
@@ -362,5 +370,3 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
-
-    
