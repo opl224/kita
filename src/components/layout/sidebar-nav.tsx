@@ -35,6 +35,17 @@ export function SidebarNav() {
     return () => unsubscribeAuth();
   }, [auth]);
   
+  const updateLastSeen = () => {
+    if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        updateDoc(userDocRef, {
+            lastSeenNotifications: serverTimestamp()
+        }).catch(err => {
+            console.error("Failed to update lastSeenNotifications:", err);
+        });
+    }
+  };
+
   useEffect(() => {
     if (!user) {
         setNotificationCount(0);
@@ -43,54 +54,48 @@ export function SidebarNav() {
 
     const userDocRef = doc(db, "users", user.uid);
 
-    // This listener reacts to changes in the user's lastSeenNotifications field.
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
         if (!userSnap.exists()) return;
         
         const userData = userSnap.data();
         const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
         
-        // Query for notifications created after the user last checked.
         const q = query(
             collection(db, "notifications"),
             where("createdAt", ">", lastSeen)
         );
 
-        // This listener gives us the real-time count of new notifications.
         const unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
-            setNotificationCount(querySnapshot.size);
+            // Hanya update count jika tidak di halaman notifikasi
+            if (pathname !== '/notifications') {
+                setNotificationCount(querySnapshot.size);
+            } else {
+                setNotificationCount(0); // Pastikan count 0 jika sudah di halaman notifikasi
+            }
         }, (error) => {
             console.error("Error fetching notification count:", error);
         });
 
-        return () => unsubscribeNotifications(); // Clean up notification listener
+        return () => unsubscribeNotifications();
     }, (error) => {
         console.error("Error fetching user data for notifications:", error);
     });
 
-    return () => unsubscribeUser(); // Clean up user listener
-  }, [db, user]);
-
-  // This function handles the click on the notification tab.
-  const handleNotificationClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault(); // Prevent default link behavior
-    
-    // Immediately hide the red dot for a better UX (Optimistic Update)
-    setNotificationCount(0);
-
-    // Update the timestamp in Firestore in the background
-    if (user) {
-        const userDocRef = doc(db, "users", user.uid);
-        updateDoc(userDocRef, {
-            lastSeenNotifications: serverTimestamp()
-        }).catch(err => {
-            // If the update fails, we might want to show the dot again,
-            // but for now, we'll just log the error.
-            console.error("Failed to update lastSeenNotifications:", err);
-        });
+    // Jika pengguna sudah berada di halaman notifikasi, update last seen
+    if (pathname === '/notifications') {
+        updateLastSeen();
+        setNotificationCount(0);
     }
+
+    return () => unsubscribeUser();
+  }, [db, user, pathname]);
+
+  const handleNotificationClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault(); 
     
-    // Navigate to the notifications page
+    setNotificationCount(0);
+    updateLastSeen();
+    
     router.push('/notifications');
   };
 
@@ -106,8 +111,7 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const isNotificationItem = item.notificationKey === 'notifications';
-            // Show notification dot if it's the notification item and count > 0, AND we are not on the notifications page
-            const hasNotification = isNotificationItem && notificationCount > 0 && pathname !== '/notifications';
+            const hasNotification = isNotificationItem && notificationCount > 0;
             
             const linkProps = isNotificationItem 
                 ? { onClick: handleNotificationClick } 
