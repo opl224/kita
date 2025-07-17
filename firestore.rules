@@ -1,0 +1,20 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can read and update their own user document.
+    // Anyone can create a user document (for signup).
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // Authenticated users can read the list of groups and create new ones.
+    match /groups/{groupId} {
+      allow read, create: if request.auth != null;
+      // Add update/delete rules here if needed later
+    }
+  }
+}
