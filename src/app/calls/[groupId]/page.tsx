@@ -121,29 +121,36 @@ export default function GroupChatPage() {
     const db = getFirestore(app);
     const { toast } = useToast();
 
-    // Custom locale for date-fns to remove "kurang dari"
+    // Custom locale for date-fns to remove "kurang dari" and "yang lalu"
     const customLocale: Locale = {
         ...id,
         formatDistance: (token, count, options) => {
-            if (token === 'lessThanXMinutes') {
-                 if (options?.addSuffix) {
-                    return count === 1 ? 'baru saja' : `${count} menit yang lalu`;
-                 }
-                 return count === 1 ? 'baru saja' : `${count} menit`;
+            const formatDistanceLocale = {
+                lessThanXSeconds: 'baru saja',
+                xSeconds: '{{count}} detik',
+                halfAMinute: 'setengah menit',
+                lessThanXMinutes: 'baru saja',
+                xMinutes: '{{count}} menit',
+                aboutXHours: '{{count}} jam',
+                xHours: '{{count}} jam',
+                xDays: '{{count}} hari',
+                aboutXWeeks: '{{count}} minggu',
+                xWeeks: '{{count}} minggu',
+                aboutXMonths: '{{count}} bulan',
+                xMonths: '{{count}} bulan',
+                aboutXYears: '{{count}} tahun',
+                xYears: '{{count}} tahun',
+                overXYears: '{{count}} tahun',
+                almostXYears: '{{count}} tahun',
+            };
+    
+            const result = formatDistanceLocale[token as keyof typeof formatDistanceLocale]?.replace('{{count}}', count.toString()) ?? '';
+    
+            if (options?.addSuffix) {
+                 return result;
             }
-             if (token === 'xMinutes') {
-                if (options?.addSuffix) {
-                    return `${count} menit yang lalu`;
-                }
-                return `${count} menit`;
-             }
-             if (token === 'lessThanXSeconds') {
-                if (options?.addSuffix) {
-                    return 'baru saja';
-                }
-                return 'baru saja';
-            }
-            return id.formatDistance!(token, count, options);
+    
+            return result;
         },
     };
 

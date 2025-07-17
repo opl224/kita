@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MessageCircle, ArrowRight, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,21 @@ const groupFormSchema = z.object({
 
 type GroupFormValues = z.infer<typeof groupFormSchema>;
 
+type Group = {
+  id: string;
+  name: string;
+  members: any[];
+  lastMessage?: string;
+  lastMessageTime?: string;
+};
+
+
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6 cursor-pointer hover:shadow-[8px_8px_16px_#0d0d0d,-8px_-8px_16px_#262626]";
 
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isSuperUser, setIsSuperUser] = useState(false);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
@@ -47,17 +56,29 @@ export default function VoiceNoteGroupsPage() {
   });
 
    useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        setIsSuperUser(currentUser.uid === superUserUid);
-        
-        const groupsCollection = collection(db, 'groups');
-        const groupSnapshot = await getDocs(groupsCollection);
-        const groupList = groupSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        if (currentUser) {
+            setIsSuperUser(currentUser.uid === superUserUid);
+        }
+        setLoading(false);
+    });
 
+    return () => unsubscribeAuth();
+  }, [auth]);
+
+  useEffect(() => {
+    if (loading) return; 
+
+    const groupsCollection = collection(db, 'groups');
+    const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
+
+    const unsubscribeGroups = onSnapshot(q, async (querySnapshot) => {
+        const groupList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
+        
         // Fetch user data for members
-        const allMemberIds = [...new Set(groupList.flatMap(g => g.members))];
+        const allMemberIds = [...new Set(groupList.flatMap(g => g.members || []))];
+        
         if (allMemberIds.length > 0) {
             const usersCollection = collection(db, 'users');
             const usersQuery = query(usersCollection, where(documentId(), 'in', allMemberIds));
@@ -75,29 +96,24 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setGroups(groupList);
         }
-
-      }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [auth, db]);
+    return () => unsubscribeGroups();
+
+  }, [db, loading]);
 
   const onGroupSubmit = async (data: GroupFormValues) => {
     if (!user) return;
     try {
       const groupsCollection = collection(db, 'groups');
-      const newGroupDoc = await addDoc(groupsCollection, {
+      await addDoc(groupsCollection, {
         name: data.name,
-        members: [], 
+        members: [user.uid], // Creator is the first member
         createdAt: serverTimestamp(),
         createdBy: user.uid,
+        lastMessage: "Grup baru saja dibuat.",
+        lastMessageTime: serverTimestamp()
       });
-
-      // Refresh groups list
-      const groupSnapshot = await getDocs(groupsCollection);
-      const groupList = groupSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setGroups(groupList);
       
       toast({
         title: "Grup Dibuat",
@@ -121,7 +137,7 @@ export default function VoiceNoteGroupsPage() {
 
 
   if (loading) {
-    return <div>Memuat grup...</div>
+    return <div className="flex items-center justify-center h-screen">Memuat grup...</div>
   }
 
   return (
@@ -141,12 +157,17 @@ export default function VoiceNoteGroupsPage() {
                   <div>
                       <h2 className="text-xl font-headline font-semibold text-foreground">{group.name}</h2>
                       <div className="flex items-center -space-x-2 mt-2">
-                        {group.members && group.members.length > 0 ? group.members.map((member: any) => (
+                        {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
                           <Avatar key={member.uid} className="h-8 w-8 border-2 border-background">
                             <AvatarImage src={member.avatarUrl} alt={member.displayName} className="object-cover"/>
                             <AvatarFallback>{member.displayName?.charAt(0) || '?'}</AvatarFallback>
                           </Avatar>
                         )) : <p className="text-xs text-muted-foreground">Belum ada anggota</p>}
+                         {group.members && group.members.length > 5 && (
+                            <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
+                            </Avatar>
+                        )}
                       </div>
                   </div>
                    <div className="text-primary opacity-50">
