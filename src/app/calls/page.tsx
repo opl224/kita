@@ -179,6 +179,8 @@ export default function VoiceNoteGroupsPage() {
     if (!deletingGroup) return;
 
     try {
+      // Hanya menghapus dokumen grup. Pesan akan menjadi data yatim piatu
+      // dan idealnya dihapus oleh Cloud Function (backend).
       await deleteDoc(doc(db, 'groups', deletingGroup.id));
 
       toast({
@@ -189,7 +191,7 @@ export default function VoiceNoteGroupsPage() {
       console.error("Error deleting group:", error);
       let description = "Terjadi kesalahan saat menghapus grup.";
       if (error instanceof Error && (error as any).code === 'permission-denied') {
-          description = "Anda tidak memiliki izin untuk menghapus grup ini.";
+          description = "Anda tidak memiliki izin untuk menghapus grup ini. Pastikan aturan keamanan Firebase Anda mengizinkan penghapusan.";
       }
       toast({
         title: "Gagal Menghapus Grup",
@@ -249,7 +251,7 @@ export default function VoiceNoteGroupsPage() {
                           <AlertDialogHeader>
                               <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                  Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup dan semua pesan di dalamnya secara permanen.
+                                  Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup secara permanen. Pesan di dalamnya tidak akan terhapus dari sisi aplikasi ini.
                               </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
