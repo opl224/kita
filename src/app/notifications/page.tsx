@@ -26,18 +26,16 @@ export default function NotificationsPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // Mark notifications as seen when the page is visited
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, {
+          lastSeenNotifications: serverTimestamp()
+        }).catch(err => console.error("Error updating last seen notifications:", err));
+      }
     });
     return () => unsubscribeAuth();
-  }, [auth]);
-
-  useEffect(() => {
-    if (user) {
-      const userDocRef = doc(db, "users", user.uid);
-      updateDoc(userDocRef, {
-        lastSeenNotifications: serverTimestamp()
-      }).catch(err => console.error("Error updating last seen notifications:", err));
-    }
-  }, [user, db]);
+  }, [auth, db]);
 
   useEffect(() => {
     const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
@@ -77,7 +75,7 @@ export default function NotificationsPage() {
         ) : (
             <div className="space-y-4">
                 {notifications.map(notif => (
-                    <Card key={notif.id} className="p-4 rounded-xl shadow-neumorphic-outset">
+                    <Card key={notif.id} className="p-4 rounded-xl shadow-neumorphic-outset border-none">
                         <div className="flex items-start gap-4">
                            <div className="bg-yellow-500/20 p-2 rounded-full mt-1">
                                <Coins className="h-5 w-5 text-yellow-500" />
