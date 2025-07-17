@@ -3,6 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { getAuth, signOut } from "firebase/auth";
+import { app } from "@/lib/firebase";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,8 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-[4px_4px_8px_#0d0
 
 export default function ProfilePage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const auth = getAuth(app);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -47,6 +52,23 @@ export default function ProfilePage() {
       title: "Profil Diperbarui",
       description: "Informasi profil Anda telah berhasil disimpan.",
     });
+  }
+
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Berhasil Keluar",
+        description: "Anda telah berhasil keluar dari akun Anda.",
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: "Gagal Keluar",
+        description: "Terjadi kesalahan saat mencoba keluar.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -131,7 +153,7 @@ export default function ProfilePage() {
               <Button type="submit" variant="default" className={`${neumorphicButtonStyle} flex-1 bg-primary text-primary-foreground`}>
                 Simpan Perubahan
               </Button>
-              <Button type="button" variant="secondary" className={`${neumorphicButtonStyle} flex-1`}>
+              <Button type="button" variant="secondary" onClick={handleLogout} className={`${neumorphicButtonStyle} flex-1`}>
                 <LogOut className="mr-2 h-5 w-5" />
                 Keluar
               </Button>
