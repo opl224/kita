@@ -4,13 +4,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2 } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, UserCheck, Loader2 } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';
@@ -25,6 +25,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Message = {
     id: string;
@@ -40,6 +49,13 @@ type GroupInfo = {
     name: string;
     members: string[];
     createdBy: string;
+}
+
+type AppUser = {
+    id: string;
+    displayName: string;
+    avatarUrl: string;
+    email: string;
 }
 
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
@@ -106,6 +122,12 @@ export default function GroupChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // Invite users state
+    const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+    const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+    const [nonMemberUsers, setNonMemberUsers] = useState<AppUser[]>([]);
+    const [invitingUsers, setInvitingUsers] = useState<Set<string>>(new Set());
+
     // Recording states
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
@@ -182,9 +204,9 @@ export default function GroupChatPage() {
                     setGroupInfo(groupData);
 
                     if (!groupData.members.includes(user.uid)) {
-                        await updateDoc(groupDocRef, {
-                            members: arrayUnion(user.uid)
-                        });
+                       toast({ title: "Akses Ditolak", description: "Anda bukan anggota grup ini.", variant: "destructive" });
+                       router.push('/calls');
+                       return;
                     }
                 } else {
                     toast({ title: "Grup tidak ditemukan", variant: "destructive" });
@@ -213,6 +235,71 @@ export default function GroupChatPage() {
         return () => unsubscribeMessages();
 
     }, [user, groupId, db, router, toast]);
+
+    // Effect to fetch users for invitation dialog
+    useEffect(() => {
+        if (isSuperUser && isInviteDialogOpen) {
+            const fetchUsers = async () => {
+                const usersCollection = collection(db, 'users');
+                const usersSnapshot = await getDocs(usersCollection);
+                const allUsersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+                setAllUsers(allUsersData);
+            };
+            fetchUsers();
+        }
+    }, [isSuperUser, isInviteDialogOpen, db]);
+
+    // Effect to filter non-member users
+    useEffect(() => {
+        if (groupInfo && allUsers.length > 0) {
+            const memberIds = new Set(groupInfo.members);
+            const nonMembers = allUsers.filter(u => !memberIds.has(u.id));
+            setNonMemberUsers(nonMembers);
+        }
+    }, [groupInfo, allUsers]);
+
+    const handleInviteUser = async (invitedUser: AppUser) => {
+        if (!user || !groupInfo) return;
+
+        setInvitingUsers(prev => new Set(prev).add(invitedUser.id));
+
+        try {
+            // Check if an invitation already exists
+            const invitationsRef = collection(db, 'invitations');
+            const q = query(invitationsRef, 
+                where('groupId', '==', groupId), 
+                where('userId', '==', invitedUser.id),
+                where('status', '==', 'pending')
+            );
+            const existingInvitation = await getDocs(q);
+
+            if (!existingInvitation.empty) {
+                toast({ title: "Undangan Sudah Ada", description: `${invitedUser.displayName} sudah diundang ke grup ini.`, variant: "default" });
+                return;
+            }
+
+            await addDoc(invitationsRef, {
+                groupId: groupId,
+                groupName: groupInfo.name,
+                userId: invitedUser.id,
+                invitedBy: user.displayName,
+                createdAt: serverTimestamp(),
+                status: 'pending' // pending, accepted, rejected
+            });
+
+            toast({ title: "Undangan Terkirim", description: `Undangan telah dikirim ke ${invitedUser.displayName}.` });
+            
+        } catch (error) {
+            console.error("Error sending invitation:", error);
+            toast({ title: "Gagal Mengundang", description: "Terjadi kesalahan saat mengirim undangan.", variant: "destructive" });
+        } finally {
+            setInvitingUsers(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(invitedUser.id);
+                return newSet;
+            });
+        }
+    };
     
     const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -284,7 +371,7 @@ export default function GroupChatPage() {
 
             await updateDoc(doc(db, 'groups', groupId), {
                 lastMessage: `Pesan suara (${formatTime(Math.round(duration))})`,
-                lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: false, locale: customLocale })
+                lastMessageTime: serverTimestamp()
             });
             
         } catch (error) {
@@ -390,9 +477,49 @@ const startRecording = async () => {
                     <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
                 </div>
                  {isSuperUser && (
-                    <Button variant="ghost" size="icon" className="ml-auto">
-                        <UserPlus />
-                    </Button>
+                    <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="ml-auto">
+                                <UserPlus />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-[90vw] sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Undang Pengguna</DialogTitle>
+                                <DialogDescription>
+                                    Pilih pengguna untuk diundang ke grup "{groupInfo?.name}".
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="h-72">
+                                <div className="space-y-2 pr-4">
+                                {nonMemberUsers.length > 0 ? nonMemberUsers.map(u => (
+                                    <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={u.avatarUrl} />
+                                            <AvatarFallback>{u.displayName.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{u.displayName}</p>
+                                            <p className="text-xs text-muted-foreground">{u.email}</p>
+                                        </div>
+                                        <Button 
+                                            size="sm" 
+                                            onClick={() => handleInviteUser(u)}
+                                            disabled={invitingUsers.has(u.id)}
+                                        >
+                                            {invitingUsers.has(u.id) ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <UserPlus className="h-4 w-4 mr-2" />
+                                            )}
+                                            Undang
+                                        </Button>
+                                    </div>
+                                )) : <p className="text-center text-muted-foreground py-8">Semua pengguna sudah di dalam grup.</p>}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
                  )}
             </header>
 
@@ -480,3 +607,5 @@ const startRecording = async () => {
         </div>
     );
 }
+
+    
