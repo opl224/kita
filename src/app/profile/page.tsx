@@ -171,13 +171,11 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
-      <header className="flex justify-between items-center">
-        <div>
-            <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-              Profil Saya
-            </h1>
-            <p className="text-muted-foreground mt-1">Kelola informasi akun Anda.</p>
-        </div>
+      <header>
+          <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+            Profil Saya
+          </h1>
+          <p className="text-muted-foreground mt-1">Kelola informasi akun Anda.</p>
       </header>
 
       <Card className={neumorphicCardStyle}>

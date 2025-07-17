@@ -2,11 +2,11 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Bell, DollarSign, Phone } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bell, DollarSign, Phone, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [isEditingMoney, setIsEditingMoney] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -51,9 +53,9 @@ export default function Home() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        if (currentUser.uid === superUserUid) {
-          setIsSuperUser(true);
-        }
+        const isOpank = currentUser.uid === superUserUid;
+        setIsSuperUser(isOpank);
+        
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -61,6 +63,14 @@ export default function Home() {
           setUserData(data);
           form.reset({ amount: data.moneyCollected || 0 });
         }
+
+        if (isOpank) {
+          const usersCollection = collection(db, "users");
+          const usersSnapshot = await getDocs(usersCollection);
+          const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAllUsers(usersList);
+        }
+
       }
       setLoading(false);
     });
@@ -183,6 +193,34 @@ export default function Home() {
                 </Button>
             </div>
           </Card>
+
+           {isSuperUser && (
+            <Card className={`${neumorphicCardStyle} p-6`}>
+              <CardHeader className="p-0 mb-4">
+                  <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
+                    <Users className="h-6 w-6"/>
+                    Semua Pengguna
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                  <div className="space-y-4">
+                      {allUsers.map((u) => (
+                          <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-[inset_3px_3px_6px_#0d0d0d,inset_-3px_-3px_6px_#262626]">
+                              <Avatar className="h-10 w-10">
+                                  <AvatarImage src={u.avatarUrl} alt={u.displayName} />
+                                  <AvatarFallback>{u.displayName?.charAt(0) || '?'}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                  <p className="font-semibold text-foreground">{u.displayName}</p>
+                                  <p className="text-sm text-muted-foreground">{u.email}</p>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </CardContent>
+            </Card>
+          )}
+
         </aside>
       </main>
     </div>
