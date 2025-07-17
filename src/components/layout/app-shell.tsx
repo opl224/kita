@@ -25,8 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = getAuth(app);
   
   const authRequiredRoutes = ['/', '/calls', '/notifications', '/profile'];
-  const isAuthRequired = authRequiredRoutes.includes(pathname);
+  const isAuthRequired = authRequiredRoutes.some(route => pathname.startsWith(route)) && pathname !== '/calls' ? pathname === '/' || pathname === '/notifications' || pathname === '/profile' : authRequiredRoutes.includes(pathname);
   const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isGroupChatPage = pathname.startsWith('/calls/') && pathname.split('/').length > 2;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -41,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [auth, router, isAuthRequired, isAuthPage, pathname]);
+  }, [auth, router, isAuthRequired, isAuthPage]);
 
   const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null);
@@ -53,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd || !isAuthRequired) return;
+    if (!touchStart || !touchEnd || !isAuthRequired || isGroupChatPage) return;
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > SWIPE_THRESHOLD;
     const isRightSwipe = distance < -SWIPE_THRESHOLD;
@@ -114,10 +115,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <main className={cn("flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8", "animate-in fade-in-50")}>
+      <main className={cn("flex-1 overflow-y-auto", { "p-4 sm:p-6 lg:p-8": !isGroupChatPage }, "animate-in fade-in-50")}>
         {children}
       </main>
-      <SidebarNav />
+      {!isGroupChatPage && <SidebarNav />}
     </div>
   );
 }
