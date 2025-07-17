@@ -12,52 +12,53 @@ export default function Home() {
     {
       id: 1,
       user: "Alex Doe",
-      action: "started a new call.",
-      time: "5m ago",
+      action: "memulai panggilan baru.",
+      time: "5 menit yang lalu",
       avatar: "https://placehold.co/40x40.png?text=AD",
     },
     {
       id: 2,
       user: "Jane Smith",
-      action: "sent you a message.",
-      time: "1h ago",
+      action: "mengirimi Anda pesan.",
+      time: "1 jam yang lalu",
       avatar: "https://placehold.co/40x40.png?text=JS",
     },
     {
       id: 3,
-      user: "System",
-      action: "You have a new follower!",
-      time: "3h ago",
+      user: "Sistem",
+      action: "Anda memiliki pengikut baru!",
+      time: "3 jam yang lalu",
       avatar: "https://placehold.co/40x40.png?text=S",
     },
   ];
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
-      <header>
-        <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-          Beranda
-        </h1>
-        <p className="text-muted-foreground mt-1">Selamat datang kembali!</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <p className="text-muted-foreground">Selamat Datang,</p>
+          <h1 className="text-3xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+            User Ling
+          </h1>
+        </div>
+        <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
+          <AvatarImage src="https://placehold.co/100x100.png" alt="Avatar Pengguna" data-ai-hint="user avatar" />
+          <AvatarFallback>UL</AvatarFallback>
+        </Avatar>
       </header>
       
-      <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <section className="lg:col-span-2 flex flex-col gap-8">
-          <Card className={`${neumorphicCardStyle} p-6 sm:p-8`}>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <Avatar className="h-24 w-24 border-4 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
-                <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="user avatar" />
-                <AvatarFallback>UL</AvatarFallback>
-              </Avatar>
-              <div className="text-center sm:text-left">
-                <h2 className="text-2xl font-headline font-semibold text-foreground">
-                  Selamat Datang, User Ling!
-                </h2>
-                <p className="text-muted-foreground mt-1">Senang melihat Anda lagi hari ini.</p>
+      <main className="flex flex-col gap-8">
+        <Card className={`${neumorphicInsetStyle} p-6`}>
+            <div className="flex items-center gap-4 text-primary">
+              <DollarSign className="h-8 w-8" />
+              <div className="flex flex-col">
+                <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
+                <span className="text-3xl font-bold text-foreground">Rp 1.234.567</span>
               </div>
             </div>
-          </Card>
+        </Card>
 
+        <section className="flex flex-col gap-8">
           <Card className={`${neumorphicCardStyle} p-6`}>
             <h3 className="text-xl font-headline font-semibold mb-4 text-foreground">Pemberitahuan Terbaru</h3>
             <div className="space-y-4">
@@ -85,17 +86,7 @@ export default function Home() {
           </Card>
         </section>
 
-        <aside className="lg:col-span-1 flex flex-col gap-8">
-           <Card className={`${neumorphicInsetStyle} p-6`}>
-            <div className="flex items-center gap-4 text-primary">
-              <DollarSign className="h-8 w-8" />
-              <div className="flex flex-col">
-                <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
-                <span className="text-3xl font-bold text-foreground">Rp 1.234.567</span>
-              </div>
-            </div>
-          </Card>
-
+        <aside className="flex flex-col gap-8">
           <Card className={`${neumorphicCardStyle} p-6`}>
             <h3 className="text-xl font-headline font-semibold mb-4 text-foreground">Tindakan Cepat</h3>
             <div className="flex flex-col gap-4">
