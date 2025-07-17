@@ -46,6 +46,7 @@ export default function GroupChatPage() {
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const startTimeRef = useRef<number>(0);
     
     const params = useParams();
     const groupId = params.groupId as string;
@@ -154,8 +155,14 @@ const startRecording = async () => {
             audioBitsPerSecond: 24000
         };
         
+        const workerUrl = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js';
+        const response = await fetch(workerUrl);
+        const workerCode = await response.text();
+        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerObjectUrl = URL.createObjectURL(workerBlob);
+
         const workerOptions = {
-            encoderWorkerFactory: () => new Worker('https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js'),
+            encoderWorkerFactory: () => new Worker(workerObjectUrl),
             OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
             WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
         };
@@ -166,10 +173,10 @@ const startRecording = async () => {
         
         recorder.onstart = () => {
             setIsRecording(true);
-            const startTime = Date.now();
+            startTimeRef.current = Date.now();
             if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
             recordingIntervalRef.current = setInterval(() => {
-                const elapsed = (Date.now() - startTime) / 1000;
+                const elapsed = (Date.now() - startTimeRef.current) / 1000;
                 setRecordingDuration(elapsed);
             }, 100);
         };
@@ -184,6 +191,7 @@ const startRecording = async () => {
             stream.getTracks().forEach(track => track.stop());
             setIsRecording(false);
             if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+            URL.revokeObjectURL(workerObjectUrl);
             
             const finalDuration = recordingDuration;
             setRecordingDuration(0);
@@ -274,31 +282,23 @@ const startRecording = async () => {
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                 <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-4`}>
+                 <div className={`${neumorphicInsetStyle} flex items-center justify-end p-2 rounded-full h-20 gap-4`}>
                     
-                    {isRecording ? (
-                        <>
-                            <div className="flex items-center gap-2 min-w-[100px] justify-center ml-4">
-                                <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
-                                <span className="font-mono text-lg text-foreground">{formatTime(recordingDuration)}</span>
-                            </div>
-                            <Button size="icon" variant="destructive" className="w-16 h-16 rounded-full flex-shrink-0" onClick={toggleRecording}>
-                                <Square className="h-8 w-8" />
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                             {/* Placeholder to push mic button to the right */}
-                            <div className="flex-1"></div>
-                            <Button 
-                                size="icon" 
-                                className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
-                                onClick={toggleRecording}
-                            >
-                                <Mic className="h-8 w-8" />
-                            </Button>
-                        </>
+                    {isRecording && (
+                        <div className="flex items-center gap-2 flex-1 justify-center">
+                            <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
+                            <span className="font-mono text-lg text-foreground">{formatTime(recordingDuration)}</span>
+                        </div>
                     )}
+                    
+                    <Button 
+                        size="icon" 
+                        variant={isRecording ? "destructive" : "default"}
+                        className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
+                        onClick={toggleRecording}
+                    >
+                        {isRecording ? <Square className="h-8 w-8" /> : <Mic className="h-8 w-8" />}
+                    </Button>
                  </div>
             </footer>
         </div>
