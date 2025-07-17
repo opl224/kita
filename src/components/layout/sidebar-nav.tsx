@@ -35,31 +35,48 @@ export function SidebarNav() {
   }, [auth]);
   
   useEffect(() => {
-    if (!user) return;
-
-    let unsubscribeNotifications: () => void;
+    if (!user) {
+        setNotificationCount(0);
+        return;
+    }
 
     const userDocRef = doc(db, "users", user.uid);
-    getDoc(userDocRef).then(userSnap => {
+
+    // Listen for real-time updates on the user document
+    const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
+        let unsubscribeNotifications: (() => void) | undefined;
+
         if (userSnap.exists()) {
             const userData = userSnap.data();
-            const lastSeen = userData.lastSeenNotifications || new Date(0);
+            const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
             
             const q = query(
                 collection(db, "notifications"),
                 where("createdAt", ">", lastSeen)
             );
     
+            // Set up a new notification listener based on the updated lastSeen time
             unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
               setNotificationCount(querySnapshot.size);
+            }, (error) => {
+                console.error("Error fetching notifications:", error);
+                setNotificationCount(0);
             });
         }
+
+        // Return a cleanup function for the notifications listener
+        return () => {
+            if (unsubscribeNotifications) {
+                unsubscribeNotifications();
+            }
+        };
+    }, (error) => {
+        console.error("Error fetching user data:", error);
     });
 
+    // Main cleanup function for the user listener
     return () => {
-        if (unsubscribeNotifications) {
-            unsubscribeNotifications();
-        }
+        unsubscribeUser();
     };
   }, [db, user]);
 
