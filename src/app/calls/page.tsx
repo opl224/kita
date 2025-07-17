@@ -4,12 +4,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MessageCircle, ArrowRight, UserPlus } from "lucide-react";
+import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, writeBatch, updateDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const groupFormSchema = z.object({
   name: z.string().min(3, "Nama grup minimal 3 karakter."),
@@ -33,7 +34,7 @@ type Group = {
 };
 
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6 cursor-pointer hover:shadow-[8px_8px_16px_#0d0d0d,-8px_-8px_16px_#262626]";
+const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6";
 
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -41,6 +42,9 @@ export default function VoiceNoteGroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -54,6 +58,14 @@ export default function VoiceNoteGroupsPage() {
       name: "",
     },
   });
+
+  useEffect(() => {
+    if (editingGroup) {
+      form.setValue("name", editingGroup.name);
+    } else {
+      form.reset({ name: "" });
+    }
+  }, [editingGroup, form]);
 
    useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -76,7 +88,6 @@ export default function VoiceNoteGroupsPage() {
     const unsubscribeGroups = onSnapshot(q, async (querySnapshot) => {
         const groupList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
         
-        // Fetch user data for members
         const allMemberIds = [...new Set(groupList.flatMap(g => g.members || []))];
         
         if (allMemberIds.length > 0) {
@@ -105,31 +116,75 @@ export default function VoiceNoteGroupsPage() {
   const onGroupSubmit = async (data: GroupFormValues) => {
     if (!user) return;
     try {
-      const groupsCollection = collection(db, 'groups');
-      await addDoc(groupsCollection, {
-        name: data.name,
-        members: [user.uid], // Creator is the first member
-        createdAt: serverTimestamp(),
-        createdBy: user.uid,
-        lastMessage: "Grup baru saja dibuat.",
-        lastMessageTime: serverTimestamp()
-      });
-      
-      toast({
-        title: "Grup Dibuat",
-        description: `Grup "${data.name}" berhasil dibuat.`,
-      });
-      setIsCreatingGroup(false);
-      form.reset();
-
+        if (editingGroup) {
+            // Edit existing group
+            const groupRef = doc(db, 'groups', editingGroup.id);
+            await updateDoc(groupRef, { name: data.name });
+            toast({
+                title: "Grup Diperbarui",
+                description: `Nama grup telah diubah menjadi "${data.name}".`,
+            });
+            setEditingGroup(null);
+        } else {
+            // Create new group
+            const groupsCollection = collection(db, 'groups');
+            await addDoc(groupsCollection, {
+                name: data.name,
+                members: [user.uid],
+                createdAt: serverTimestamp(),
+                createdBy: user.uid,
+                lastMessage: "Grup baru saja dibuat.",
+                lastMessageTime: serverTimestamp()
+            });
+            toast({
+                title: "Grup Dibuat",
+                description: `Grup "${data.name}" berhasil dibuat.`,
+            });
+            setIsCreatingGroup(false);
+        }
+        form.reset();
     } catch (error) {
        toast({
-        title: "Gagal Membuat Grup",
-        description: "Terjadi kesalahan saat membuat grup baru.",
+        title: editingGroup ? "Gagal Memperbarui Grup" : "Gagal Membuat Grup",
+        description: "Terjadi kesalahan saat menyimpan perubahan.",
         variant: "destructive",
       });
     }
   };
+
+  const handleDeleteGroup = async () => {
+    if (!deletingGroup) return;
+
+    try {
+      const groupRef = doc(db, 'groups', deletingGroup.id);
+      const messagesRef = collection(db, 'groups', deletingGroup.id, 'messages');
+      const messagesSnapshot = await getDocs(messagesRef);
+      
+      const batch = writeBatch(db);
+      
+      messagesSnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+      batch.delete(groupRef);
+      
+      await batch.commit();
+
+      toast({
+        title: "Grup Dihapus",
+        description: `Grup "${deletingGroup.name}" dan semua pesannya telah dihapus.`,
+      });
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      toast({
+        title: "Gagal Menghapus Grup",
+        description: "Terjadi kesalahan saat menghapus grup.",
+        variant: "destructive",
+      });
+    } finally {
+        setDeletingGroup(null);
+    }
+  };
+
 
   const handleGroupClick = (groupId: string) => {
     router.push(`/calls/${groupId}`);
@@ -151,11 +206,41 @@ export default function VoiceNoteGroupsPage() {
 
       <main className="space-y-6">
         {groups.map(group => (
-          <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
+          <Card key={group.id} className={neumorphicCardStyle}>
+             {isSuperUser && (
+                <div className="absolute top-2 left-2 z-10">
+                    <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup dan semua pesan di dalamnya secara permanen.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-start">
-                  <div>
-                      <h2 className="text-xl font-headline font-semibold text-foreground">{group.name}</h2>
+                  <div className="pr-4">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-headline font-semibold text-foreground">{group.name}</h2>
+                         {isSuperUser && (
+                           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        )}
+                      </div>
                       <div className="flex items-center -space-x-2 mt-2">
                         {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
                           <Avatar key={member.uid} className="h-8 w-8 border-2 border-background">
@@ -170,10 +255,10 @@ export default function VoiceNoteGroupsPage() {
                         )}
                       </div>
                   </div>
-                   <div className="text-primary opacity-50">
+                   <Button variant="ghost" size="icon" className="text-primary opacity-50 flex-shrink-0" onClick={() => handleGroupClick(group.id)}>
                       <ArrowRight className="h-6 w-6" />
                       <span className="sr-only">Masuk Grup</span>
-                   </div>
+                   </Button>
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
                     <MessageCircle className="h-4 w-4"/>
@@ -222,6 +307,38 @@ export default function VoiceNoteGroupsPage() {
            </div>
          )}
       </main>
+
+      {/* Edit Group Dialog */}
+      <Dialog open={!!editingGroup} onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Ubah Nama Grup</DialogTitle>
+                <DialogDescription>
+                    Masukkan nama baru untuk grup "{editingGroup?.name}".
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nama Grup Baru</FormLabel>
+                            <FormControl>
+                            <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <Button type="submit" className="w-full">Simpan Perubahan</Button>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+    
