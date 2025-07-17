@@ -209,13 +209,20 @@ export default function VoiceNoteGroupsPage() {
         {groups.map(group => (
           <Card key={group.id} className={neumorphicCardStyle}>
             <div className="flex flex-col gap-4">
-              {isSuperUser && (
-                  <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
+               {/* Baris Judul dan Aksi Admin */}
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
+                {isSuperUser && (
+                  <div className="flex items-center gap-1">
+                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6" onClick={() => setEditingGroup(group)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
                       <AlertDialogTrigger asChild>
                           <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="absolute top-3 left-3 text-muted-foreground hover:text-destructive h-8 w-8"
+                              className="text-muted-foreground hover:text-destructive h-6 w-6"
                               onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
                           >
                               <Trash2 className="h-4 w-4" />
@@ -233,42 +240,33 @@ export default function VoiceNoteGroupsPage() {
                               <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
-                  </AlertDialog>
-              )}
-
-              <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between gap-2">
-                      <div className="flex-grow min-w-0">
-                          <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
-                      </div>
-                      {isSuperUser && (
-                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6 flex-shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
-                              <Pencil className="h-4 w-4" />
-                          </Button>
-                      )}
+                    </AlertDialog>
                   </div>
-                  
-                  <div className="flex items-center">
-                    <div className="flex items-center -space-x-2">
-                        {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
-                          <Avatar key={member.uid} className="h-10 w-10 border-2 border-background">
-                            <AvatarImage src={member.avatarUrl} alt={member.displayName} className="object-cover"/>
-                            <AvatarFallback>{member.displayName?.charAt(0) || '?'}</AvatarFallback>
-                          </Avatar>
-                        )) : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">?</div>}
-                         {group.members && group.members.length > 5 && (
-                            <Avatar className="h-10 w-10 border-2 border-background">
-                                <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
-                            </Avatar>
-                        )}
-                    </div>
-                    <Button variant="ghost" size="icon" className="text-primary opacity-50 ml-auto" onClick={() => handleGroupClick(group.id)}>
-                        <ArrowRight className="h-6 w-6" />
-                        <span className="sr-only">Masuk Grup</span>
-                    </Button>
-                  </div>
+                )}
               </div>
 
+               {/* Baris Avatar dan Navigasi */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center -space-x-2">
+                    {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
+                      <Avatar key={member.uid} className="h-10 w-10 border-2 border-background">
+                        <AvatarImage src={member.avatarUrl} alt={member.displayName} className="object-cover"/>
+                        <AvatarFallback>{member.displayName?.charAt(0) || '?'}</AvatarFallback>
+                      </Avatar>
+                    )) : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">?</div>}
+                     {group.members && group.members.length > 5 && (
+                        <Avatar className="h-10 w-10 border-2 border-background">
+                            <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
+                        </Avatar>
+                    )}
+                </div>
+                <Button variant="ghost" size="icon" className="text-primary opacity-50" onClick={() => handleGroupClick(group.id)}>
+                    <ArrowRight className="h-6 w-6" />
+                    <span className="sr-only">Masuk Grup</span>
+                </Button>
+              </div>
+
+              {/* Baris Info Pesan Terakhir */}
               <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
                   <MessageCircle className="h-4 w-4 flex-shrink-0"/>
                   <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
