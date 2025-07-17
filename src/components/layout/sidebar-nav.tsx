@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -5,16 +6,44 @@ import { usePathname } from 'next/navigation';
 import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useEffect, useState } from 'react';
+import { getFirestore, collection, onSnapshot, query } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 export const menuItems = [
-  { href: '/', label: 'Beranda', icon: Home },
-  { href: '/calls', label: 'Panggilan', icon: Phone },
-  { href: '/notifications', label: 'Notifikasi', icon: Bell },
-  { href: '/profile', label: 'Profil', icon: User },
+  { href: '/', label: 'Beranda', icon: Home, notificationKey: '' },
+  { href: '/calls', label: 'Panggilan', icon: Phone, notificationKey: '' },
+  { href: '/notifications', label: 'Notifikasi', icon: Bell, notificationKey: 'notifications' },
+  { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+    });
+    return () => unsubscribeAuth();
+  }, [auth]);
+  
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, "notifications"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      setNotificationCount(querySnapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [db, user]);
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] ${neumorphicBase}`;
@@ -26,15 +55,19 @@ export function SidebarNav() {
         <div className="flex justify-around items-center h-20 px-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
+            const hasNotification = item.notificationKey === 'notifications' && notificationCount > 0;
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
                   <Link href={item.href} className={cn(
-                        "flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground",
+                        "relative flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground",
                         isActive ? activeNeumorphicButton : neumorphicButton,
                         isActive && 'text-primary'
                       )}>
                       <item.icon className={cn("h-6 w-6 transition-transform", isActive ? 'scale-110' : '')} />
+                       {hasNotification && (
+                          <span className="absolute top-3 right-3 block h-3 w-3 rounded-full bg-destructive border-2 border-background" />
+                       )}
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="top" className={cn(isActive && 'hidden')}>
