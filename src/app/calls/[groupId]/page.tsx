@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, Send, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Mic, Send, Trash2, UserPlus, Square } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -40,14 +40,12 @@ export default function GroupChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
-    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [recordingDuration, setRecordingDuration] = useState(0);
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const recordingStartTimeRef = useRef<number | null>(null);
-    const finalRecordingDurationRef = useRef<number>(0);
 
 
     const params = useParams();
@@ -72,7 +70,6 @@ export default function GroupChatPage() {
     useEffect(() => {
         if (!user || !groupId) return;
 
-        // Fetch group info
         const groupDocRef = doc(db, 'groups', groupId);
         const getGroupInfo = async () => {
             const docSnap = await getDoc(groupDocRef);
@@ -80,7 +77,6 @@ export default function GroupChatPage() {
                 const groupData = docSnap.data() as GroupInfo;
                 setGroupInfo(groupData);
 
-                // Add user to group if not already a member
                 if (!groupData.members.includes(user.uid)) {
                     await updateDoc(groupDocRef, {
                         members: arrayUnion(user.uid)
@@ -94,7 +90,6 @@ export default function GroupChatPage() {
         };
         getGroupInfo();
 
-        // Listen for messages
         const messagesColRef = collection(db, 'groups', groupId, 'messages');
         const q = query(messagesColRef, orderBy('createdAt', 'asc'));
         const unsubscribeMessages = onSnapshot(q, (querySnapshot) => {
@@ -109,19 +104,50 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
 
+    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
+        if (!audioBlob || !user || !groupId) return;
+    
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64data = reader.result as string;
+                if (base64data.length > 1048576) {
+                     toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
+                     return;
+                }
+                
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.data();
+    
+                const messagesColRef = collection(db, 'groups', groupId, 'messages');
+                await addDoc(messagesColRef, {
+                    senderId: user.uid,
+                    senderName: userData?.displayName || 'Pengguna Anonim',
+                    senderAvatar: userData?.avatarUrl || '',
+                    audioUrl: base64data,
+                    createdAt: serverTimestamp(),
+                    duration: Math.round(duration)
+                });
+    
+                const groupDocRef = doc(db, 'groups', groupId);
+                await updateDoc(groupDocRef, {
+                    lastMessage: "Pesan suara",
+                    lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
+                });
+    
+                toast({ title: "Pesan Suara Terkirim" });
+            };
+        } catch (error) {
+            console.error("Error sending voice note:", error);
+            toast({ title: "Gagal Mengirim Pesan", variant: "destructive" });
+        }
+    };
+    
+
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            if(recordingIntervalRef.current) {
-                clearInterval(recordingIntervalRef.current);
-                recordingIntervalRef.current = null;
-            }
-            if (recordingStartTimeRef.current) {
-                finalRecordingDurationRef.current = Math.round((Date.now() - recordingStartTimeRef.current) / 1000);
-            }
-            setRecordingDuration(0);
-            recordingStartTimeRef.current = null;
         }
     };
 
@@ -141,9 +167,26 @@ export default function GroupChatPage() {
                 OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
                 WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
             };
+
             mediaRecorderRef.current = new OpusMediaRecorder(stream, options, workerOptions);
             audioChunksRef.current = [];
-            setAudioBlob(null);
+            
+            mediaRecorderRef.current.onstart = () => {
+                setIsRecording(true);
+                recordingStartTimeRef.current = Date.now();
+                
+                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    
+                recordingIntervalRef.current = setInterval(() => {
+                    if(recordingStartTimeRef.current){
+                        const newDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
+                        setRecordingDuration(newDuration);
+                        if (newDuration >= 30) {
+                            stopRecording();
+                        }
+                    }
+                }, 100);
+            };
 
             mediaRecorderRef.current.ondataavailable = (event) => {
                 audioChunksRef.current.push(event.data);
@@ -151,27 +194,26 @@ export default function GroupChatPage() {
 
             mediaRecorderRef.current.onstop = () => {
                 const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                setAudioBlob(blob);
-                // Get rid of the media stream tracks
+                const finalDuration = recordingDuration;
+                
+                // Reset state
+                setIsRecording(false);
+                if(recordingIntervalRef.current) {
+                    clearInterval(recordingIntervalRef.current);
+                    recordingIntervalRef.current = null;
+                }
+                setRecordingDuration(0);
+                recordingStartTimeRef.current = null;
                 stream.getTracks().forEach(track => track.stop());
+
+                // Send the note
+                if(blob.size > 0 && finalDuration > 0.5) { // Ensure not an empty recording
+                    sendVoiceNote(blob, finalDuration);
+                }
+                audioChunksRef.current = [];
             };
 
             mediaRecorderRef.current.start();
-            setIsRecording(true);
-            recordingStartTimeRef.current = Date.now();
-            
-            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-
-            recordingIntervalRef.current = setInterval(() => {
-                if(recordingStartTimeRef.current){
-                    const duration = (Date.now() - recordingStartTimeRef.current) / 1000;
-                    setRecordingDuration(duration);
-                    if (duration >= 30) {
-                        stopRecording();
-                    }
-                }
-            }, 100);
-
         } catch (err) {
             console.error("Error starting recording:", err);
             toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
@@ -179,56 +221,14 @@ export default function GroupChatPage() {
     };
 
 
-    const cancelRecording = () => {
+    const handleMicPress = () => {
+        startRecording();
+    };
+
+    const handleMicRelease = () => {
         stopRecording();
-        setAudioBlob(null);
-        audioChunksRef.current = [];
-        finalRecordingDurationRef.current = 0;
     };
 
-    const sendVoiceNote = async () => {
-        if (!audioBlob || !user || !groupId) return;
-
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64data = reader.result as string;
-                if (base64data.length > 1048576) { // Check Firestore's 1MB document limit
-                     toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
-                     setAudioBlob(null);
-                     return;
-                }
-                
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                const userData = userDoc.data();
-
-                const messagesColRef = collection(db, 'groups', groupId, 'messages');
-                await addDoc(messagesColRef, {
-                    senderId: user.uid,
-                    senderName: userData?.displayName || 'Pengguna Anonim',
-                    senderAvatar: userData?.avatarUrl || '',
-                    audioUrl: base64data,
-                    createdAt: serverTimestamp(),
-                    duration: finalRecordingDurationRef.current
-                });
-
-                // Update last message in group
-                const groupDocRef = doc(db, 'groups', groupId);
-                await updateDoc(groupDocRef, {
-                    lastMessage: "Pesan suara",
-                    lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
-                })
-
-                setAudioBlob(null);
-                finalRecordingDurationRef.current = 0;
-                toast({ title: "Pesan Suara Terkirim" });
-            };
-        } catch (error) {
-            console.error("Error sending voice note:", error);
-            toast({ title: "Gagal Mengirim Pesan", variant: "destructive" });
-        }
-    };
 
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -269,31 +269,31 @@ export default function GroupChatPage() {
                             <Card className={`p-2 rounded-xl ${msg.senderId === user?.uid ? 'bg-primary/20' : 'bg-muted'}`}>
                                 <audio controls src={msg.audioUrl} className="w-full h-10" />
                             </Card>
-                            <p className="text-xs text-muted-foreground mt-1 px-2">
-                                {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1 px-2">
+                                <p className="text-xs text-muted-foreground">
+                                    {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatTime(msg.duration || 0)}
+                                </p>
+                            </div>
                        </div>
                     </div>
                 ))}
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                <div className={`${neumorphicInsetStyle} flex items-center p-2 rounded-full`}>
-                    {audioBlob ? (
-                        <>
-                            <audio src={URL.createObjectURL(audioBlob)} controls className="flex-1 h-10 mx-2" />
-                            <Button size="icon" variant="destructive" className="rounded-full w-12 h-12 shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" onClick={cancelRecording}>
-                                <Trash2 />
-                            </Button>
-                            <Button size="icon" variant="default" className="rounded-full w-12 h-12 ml-2 bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" onClick={sendVoiceNote}>
-                                <Send />
-                            </Button>
-                        </>
-                    ) : isRecording ? (
+                <div className={`${neumorphicInsetStyle} flex items-center justify-center p-2 rounded-full h-20`}>
+                    {isRecording ? (
                          <>
                             <div className="flex-1 text-center font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</div>
-                            <Button size="icon" variant="destructive" className="rounded-full w-14 h-14 bg-red-500 text-white shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" onClick={stopRecording}>
-                                <div className="w-4 h-4 bg-white rounded-sm" />
+                            <Button 
+                                size="icon" 
+                                variant="destructive" 
+                                className="rounded-full w-14 h-14 bg-red-500 text-white shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" 
+                                onClick={handleMicRelease}
+                            >
+                                <Square />
                             </Button>
                         </>
                     ) : (
@@ -303,10 +303,10 @@ export default function GroupChatPage() {
                                 size="icon" 
                                 variant="default" 
                                 className="rounded-full w-14 h-14 bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" 
-                                onMouseDown={startRecording} 
-                                onMouseUp={stopRecording} 
-                                onTouchStart={(e) => {e.preventDefault(); startRecording();}} 
-                                onTouchEnd={(e) => {e.preventDefault(); stopRecording();}}
+                                onMouseDown={handleMicPress} 
+                                onMouseUp={handleMicRelease} 
+                                onTouchStart={(e) => {e.preventDefault(); handleMicPress();}} 
+                                onTouchEnd={(e) => {e.preventDefault(); handleMicRelease();}}
                             >
                                 <Mic />
                             </Button>
@@ -316,5 +316,5 @@ export default function GroupChatPage() {
             </footer>
         </div>
     );
-}
 
+    
