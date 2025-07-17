@@ -23,10 +23,10 @@ export default function NotificationsPage() {
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+  // Effect to mark notifications as seen when the page loads
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // Mark notifications as seen when the component mounts and user is available
       if (currentUser) {
         const userDocRef = doc(db, "users", currentUser.uid);
         updateDoc(userDocRef, {
@@ -37,6 +37,7 @@ export default function NotificationsPage() {
     return () => unsubscribeAuth();
   }, [auth, db]);
 
+  // Effect to fetch notifications
   useEffect(() => {
     if (!user) {
         setLoading(false);

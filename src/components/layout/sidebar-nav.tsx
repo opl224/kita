@@ -7,7 +7,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState } from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -34,17 +34,6 @@ export function SidebarNav() {
     });
     return () => unsubscribeAuth();
   }, [auth]);
-  
-  const updateLastSeen = () => {
-    if (user) {
-        const userDocRef = doc(db, "users", user.uid);
-        updateDoc(userDocRef, {
-            lastSeenNotifications: serverTimestamp()
-        }).catch(err => {
-            console.error("Failed to update lastSeenNotifications:", err);
-        });
-    }
-  };
 
   useEffect(() => {
     if (!user) {
@@ -52,7 +41,15 @@ export function SidebarNav() {
         return;
     }
 
+    // Jika pengguna sedang berada di halaman notifikasi, langsung set count ke 0 dan hentikan.
+    // Pembaruan timestamp akan ditangani oleh halaman notifikasi itu sendiri.
+    if (pathname === '/notifications') {
+      setNotificationCount(0);
+      return;
+    }
+
     const userDocRef = doc(db, "users", user.uid);
+    let unsubscribeNotifications: () => void = () => {};
 
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
         if (!userSnap.exists()) return;
@@ -65,40 +62,29 @@ export function SidebarNav() {
             where("createdAt", ">", lastSeen)
         );
 
-        const unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
+        // Hentikan listener sebelumnya sebelum memulai yang baru
+        unsubscribeNotifications();
+        
+        unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
             // Hanya update count jika tidak di halaman notifikasi
             if (pathname !== '/notifications') {
                 setNotificationCount(querySnapshot.size);
             } else {
-                setNotificationCount(0); // Pastikan count 0 jika sudah di halaman notifikasi
+                setNotificationCount(0);
             }
         }, (error) => {
             console.error("Error fetching notification count:", error);
         });
 
-        return () => unsubscribeNotifications();
     }, (error) => {
         console.error("Error fetching user data for notifications:", error);
     });
 
-    // Jika pengguna sudah berada di halaman notifikasi, update last seen
-    if (pathname === '/notifications') {
-        updateLastSeen();
-        setNotificationCount(0);
-    }
-
-    return () => unsubscribeUser();
+    return () => {
+      unsubscribeUser();
+      unsubscribeNotifications();
+    };
   }, [db, user, pathname]);
-
-  const handleNotificationClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault(); 
-    
-    setNotificationCount(0);
-    updateLastSeen();
-    
-    router.push('/notifications');
-  };
-
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
@@ -112,15 +98,11 @@ export function SidebarNav() {
             const isActive = pathname === item.href;
             const isNotificationItem = item.notificationKey === 'notifications';
             const hasNotification = isNotificationItem && notificationCount > 0;
-            
-            const linkProps = isNotificationItem 
-                ? { onClick: handleNotificationClick } 
-                : {};
 
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
-                  <Link href={item.href} {...linkProps} className={cn(
+                  <Link href={item.href} className={cn(
                         "relative flex flex-col items-center justify-center w-16 h-16 gap-1 text-muted-foreground border-none",
                         isActive ? activeNeumorphicButton : neumorphicButton,
                         isActive && 'text-primary'
