@@ -101,6 +101,7 @@ const AudioPlayer = ({ src }: { src: string }) => {
 
 export default function GroupChatPage() {
     const [user, setUser] = useState<User | null>(null);
+    const [isSuperUser, setIsSuperUser] = useState(false);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
@@ -120,6 +121,7 @@ export default function GroupChatPage() {
     const auth = getAuth(app);
     const db = getFirestore(app);
     const { toast } = useToast();
+    const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
     // Custom locale for date-fns to remove "kurang dari" and "yang lalu"
     const customLocale: Locale = {
@@ -162,6 +164,7 @@ export default function GroupChatPage() {
                 return;
             }
             setUser(currentUser);
+            setIsSuperUser(currentUser.uid === superUserUid);
         });
 
         return () => unsubscribeAuth();
@@ -379,9 +382,11 @@ const startRecording = async () => {
                     <h1 className="text-xl font-bold font-headline">{groupInfo?.name || 'Grup'}</h1>
                     <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
                 </div>
-                 <Button variant="ghost" size="icon" className="ml-auto">
-                    <UserPlus />
-                 </Button>
+                 {isSuperUser && (
+                    <Button variant="ghost" size="icon" className="ml-auto">
+                        <UserPlus />
+                    </Button>
+                 )}
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -395,7 +400,7 @@ const startRecording = async () => {
                            {isSender && isDeletable && (
                                <AlertDialog>
                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center">
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                    </AlertDialogTrigger>
