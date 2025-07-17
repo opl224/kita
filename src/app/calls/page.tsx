@@ -73,6 +73,8 @@ export default function VoiceNoteGroupsPage() {
         setUser(currentUser);
         if (currentUser) {
             setIsSuperUser(currentUser.uid === superUserUid);
+        } else {
+            setIsSuperUser(false);
         }
         setLoading(false);
     });
@@ -222,12 +224,11 @@ export default function VoiceNoteGroupsPage() {
         {groups.map(group => (
           <Card key={group.id} className={neumorphicCardStyle}>
             <div className="flex flex-col gap-4">
-               {/* Baris Judul dan Aksi Admin */}
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-start justify-between gap-2">
                 <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
                 {isSuperUser && (
-                  <div className="flex items-center gap-1">
-                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6" onClick={() => setEditingGroup(group)}>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingGroup(group)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
@@ -235,7 +236,7 @@ export default function VoiceNoteGroupsPage() {
                           <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="text-muted-foreground hover:text-destructive h-6 w-6"
+                              className="text-muted-foreground hover:text-destructive h-8 w-8"
                               onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
                           >
                               <Trash2 className="h-4 w-4" />
@@ -258,7 +259,6 @@ export default function VoiceNoteGroupsPage() {
                 )}
               </div>
 
-               {/* Baris Avatar dan Navigasi */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center -space-x-2">
                     {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
@@ -279,7 +279,6 @@ export default function VoiceNoteGroupsPage() {
                 </Button>
               </div>
 
-              {/* Baris Info Pesan Terakhir */}
               <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
                   <MessageCircle className="h-4 w-4 flex-shrink-0"/>
                   <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>

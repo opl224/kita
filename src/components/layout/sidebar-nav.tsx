@@ -43,62 +43,54 @@ export function SidebarNav() {
 
     const userDocRef = doc(db, "users", user.uid);
 
+    // This listener reacts to changes in the user's lastSeenNotifications field.
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
-        let unsubscribeNotifications: (() => void) | undefined;
+        if (!userSnap.exists()) return;
+        
+        const userData = userSnap.data();
+        const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
+        
+        // Query for notifications created after the user last checked.
+        const q = query(
+            collection(db, "notifications"),
+            where("createdAt", ">", lastSeen)
+        );
 
-        if (userSnap.exists()) {
-            const userData = userSnap.data();
-            const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
-            
-            const q = query(
-                collection(db, "notifications"),
-                where("createdAt", ">", lastSeen)
-            );
-    
-            unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
-              // Only update count if not on the notifications page already
-              if (pathname !== '/notifications') {
-                setNotificationCount(querySnapshot.size);
-              } else {
-                setNotificationCount(0);
-              }
-            }, (error) => {
-                console.error("Error fetching notifications:", error);
-                setNotificationCount(0);
-            });
-        }
+        // This listener gives us the real-time count of new notifications.
+        const unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
+            setNotificationCount(querySnapshot.size);
+        }, (error) => {
+            console.error("Error fetching notification count:", error);
+        });
 
-        return () => {
-            if (unsubscribeNotifications) {
-                unsubscribeNotifications();
-            }
-        };
+        return () => unsubscribeNotifications(); // Clean up notification listener
     }, (error) => {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching user data for notifications:", error);
     });
 
-    return () => {
-        unsubscribeUser();
-    };
-  }, [db, user, pathname]);
+    return () => unsubscribeUser(); // Clean up user listener
+  }, [db, user]);
 
+  // This function handles the click on the notification tab.
   const handleNotificationClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    if (!user) {
-      router.push('/notifications');
-      return;
-    }
-
-    // Optimistic UI update
-    setNotificationCount(0);
+    e.preventDefault(); // Prevent default link behavior
     
-    // Update Firestore in the background
-    const userDocRef = doc(db, "users", user.uid);
-    updateDoc(userDocRef, {
-      lastSeenNotifications: serverTimestamp()
-    }).catch(err => console.error("Error updating last seen notifications:", err));
+    // Immediately hide the red dot for a better UX (Optimistic Update)
+    setNotificationCount(0);
 
-    // Navigate to the page
+    // Update the timestamp in Firestore in the background
+    if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        updateDoc(userDocRef, {
+            lastSeenNotifications: serverTimestamp()
+        }).catch(err => {
+            // If the update fails, we might want to show the dot again,
+            // but for now, we'll just log the error.
+            console.error("Failed to update lastSeenNotifications:", err);
+        });
+    }
+    
+    // Navigate to the notifications page
     router.push('/notifications');
   };
 
@@ -114,7 +106,8 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const isNotificationItem = item.notificationKey === 'notifications';
-            const hasNotification = isNotificationItem && notificationCount > 0;
+            // Show notification dot if it's the notification item and count > 0, AND we are not on the notifications page
+            const hasNotification = isNotificationItem && notificationCount > 0 && pathname !== '/notifications';
             
             const linkProps = isNotificationItem 
                 ? { onClick: handleNotificationClick } 

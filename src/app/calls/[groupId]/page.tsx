@@ -412,42 +412,44 @@ const startRecording = async () => {
                                </Avatar>
                            )}
                            
-                           {isSender && isDeletable && (
-                                <AlertDialog>
-                                   <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                   </AlertDialogTrigger>
-                                   <AlertDialogContent>
-                                       <AlertDialogHeader>
-                                           <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
-                                           <AlertDialogDescription>
-                                               Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
-                                           </AlertDialogDescription>
-                                       </AlertDialogHeader>
-                                       <AlertDialogFooter>
-                                           <AlertDialogCancel>Batal</AlertDialogCancel>
-                                           <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Hapus</AlertDialogAction>
-                                       </AlertDialogFooter>
-                                   </AlertDialogContent>
-                                </AlertDialog>
-                           )}
+                            <div className={`flex items-center gap-2 ${isSender ? 'flex-row-reverse' : ''}`}>
+                                {isSender && isDeletable && (
+                                    <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Hapus</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
 
-                           <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
-                                {!isSender && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
-                                <Card className={`p-2 rounded-xl border-none ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
-                                    <AudioPlayer src={msg.audioUrl} />
-                                </Card>
-                                <div className="flex items-center gap-2 mt-1 px-2">
-                                    <p className="text-xs text-muted-foreground">
-                                        {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatTime(msg.duration || 0)}
-                                    </p>
+                                <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
+                                    {!isSender && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
+                                    <Card className={`p-2 rounded-xl border-none ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
+                                        <AudioPlayer src={msg.audioUrl} />
+                                    </Card>
+                                    <div className="flex items-center gap-2 mt-1 px-2">
+                                        <p className="text-xs text-muted-foreground">
+                                            {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {formatTime(msg.duration || 0)}
+                                        </p>
+                                    </div>
                                 </div>
-                           </div>
+                            </div>
                         </div>
                     )
                 })}

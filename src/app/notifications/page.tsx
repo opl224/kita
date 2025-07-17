@@ -26,16 +26,23 @@ export default function NotificationsPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      // Mark notifications as seen when the component mounts and user is available
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, {
+          lastSeenNotifications: serverTimestamp()
+        }).catch(err => console.error("Error updating last seen timestamp:", err));
+      }
     });
     return () => unsubscribeAuth();
-  }, [auth]);
+  }, [auth, db]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        setLoading(false);
+        return;
+    }
     
-    // Logic to mark notifications as seen has been moved to SidebarNav
-    // for a better user experience and to prevent race conditions.
-
     const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedNotifications: Notification[] = [];
@@ -44,6 +51,9 @@ export default function NotificationsPage() {
       });
       setNotifications(fetchedNotifications);
       setLoading(false);
+    }, (error) => {
+        console.error("Error fetching notifications:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();

@@ -9,7 +9,8 @@ export async function generateStaticParams() {
   // Attempting to fetch from Firestore here would likely fail due to security rules
   // that require authentication. By returning an empty array, we tell Next.js
   // not to pre-render any group pages at build time. Instead, they will be
-  // generated on-demand when a user first navigates to them.
+  // generated on-demand when a user first navigates to them, thanks to
+  // `dynamicParams: true` in next.config.ts.
   return [];
 }
 
