@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, UserPlus, Square, Send, Trash2, Play, Pause } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -42,13 +42,11 @@ export default function GroupChatPage() {
     // Recording states
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
-    const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
-    const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+    const recordingStartTimeRef = useRef<number>(0);
 
     const params = useParams();
     const groupId = params.groupId as string;
@@ -106,12 +104,12 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
     
-    const sendVoiceNote = async () => {
-        if (!user || !groupId || !recordedAudio) return;
+    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
+        if (!user || !groupId) return;
     
         try {
             const reader = new FileReader();
-            reader.readAsDataURL(recordedAudio.blob);
+            reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
                 if (!base64data || !base64data.startsWith('data:audio')) {
@@ -133,7 +131,7 @@ export default function GroupChatPage() {
                     senderAvatar: userData?.avatarUrl || '',
                     audioUrl: base64data,
                     createdAt: serverTimestamp(),
-                    duration: Math.round(recordedAudio.duration)
+                    duration: Math.round(duration)
                 });
     
                 await updateDoc(doc(db, 'groups', groupId), {
@@ -141,8 +139,6 @@ export default function GroupChatPage() {
                     lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
                 });
                 
-                toast({ title: "Pesan Suara Terkirim" });
-                handleDeleteRecording(); // Clear the recording after sending
             };
         } catch (error) {
             console.error("Error sending voice note:", error);
@@ -166,7 +162,6 @@ export default function GroupChatPage() {
 
     const startRecording = async () => {
         if (isRecording) return;
-        handleDeleteRecording();
         
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -182,9 +177,11 @@ export default function GroupChatPage() {
             mediaRecorderRef.current.onstart = () => {
                 setIsRecording(true);
                 setRecordingDuration(0);
+                recordingStartTimeRef.current = Date.now();
                 if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
                 recordingIntervalRef.current = setInterval(() => {
-                    setRecordingDuration(prev => prev + 0.1);
+                    const elapsed = (Date.now() - recordingStartTimeRef.current) / 1000;
+                    setRecordingDuration(elapsed);
                 }, 100);
             };
 
@@ -202,8 +199,7 @@ export default function GroupChatPage() {
                 const finalDuration = recordingDuration;
                 if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
                     const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                    const url = URL.createObjectURL(blob);
-                    setRecordedAudio({ blob, url, duration: finalDuration });
+                    sendVoiceNote(blob, finalDuration);
                 }
                 
                 audioChunksRef.current = [];
@@ -214,28 +210,6 @@ export default function GroupChatPage() {
         } catch (err) {
             console.error("Error starting recording:", err);
             toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
-        }
-    };
-
-    const handleDeleteRecording = () => {
-        if (recordedAudio) {
-            URL.revokeObjectURL(recordedAudio.url);
-        }
-        setRecordedAudio(null);
-        setIsPlaying(false);
-        if(audioPlayerRef.current) {
-            audioPlayerRef.current.pause();
-            audioPlayerRef.current.currentTime = 0;
-        }
-    };
-    
-    const togglePlayPause = () => {
-        if (audioPlayerRef.current) {
-            if (isPlaying) {
-                audioPlayerRef.current.pause();
-            } else {
-                audioPlayerRef.current.play();
-            }
         }
     };
 
@@ -295,7 +269,6 @@ export default function GroupChatPage() {
                  <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-4`}>
                     
                     {isRecording ? (
-                        // Recording state
                         <>
                             <div className="flex items-center gap-2 min-w-[100px] justify-center ml-4">
                                 <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
@@ -305,32 +278,7 @@ export default function GroupChatPage() {
                                 <Square className="h-8 w-8" />
                             </Button>
                         </>
-                    ) : recordedAudio ? (
-                        // Preview state
-                        <>
-                            <Button size="icon" variant="ghost" onClick={handleDeleteRecording}>
-                                <Trash2 className="h-6 w-6 text-destructive" />
-                            </Button>
-                            <div className="flex-1 flex items-center gap-2">
-                                <Button size="icon" variant="secondary" onClick={togglePlayPause}>
-                                    {isPlaying ? <Pause className="h-5 w-5"/> : <Play className="h-5 w-5"/>}
-                                </Button>
-                                <audio 
-                                    ref={audioPlayerRef} 
-                                    src={recordedAudio.url} 
-                                    className="hidden"
-                                    onPlay={() => setIsPlaying(true)}
-                                    onPause={() => setIsPlaying(false)}
-                                    onEnded={() => setIsPlaying(false)}
-                                />
-                                <span className="font-mono text-lg text-foreground">{formatTime(recordedAudio.duration)}</span>
-                            </div>
-                            <Button size="icon" variant="default" className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex-shrink-0" onClick={sendVoiceNote}>
-                                <Send className="h-8 w-8" />
-                            </Button>
-                        </>
                     ) : (
-                        // Initial state - Mic button on the right
                         <>
                             <div className="flex-1"></div>
                             <Button 
@@ -342,7 +290,6 @@ export default function GroupChatPage() {
                             </Button>
                         </>
                     )}
-
                  </div>
             </footer>
         </div>
