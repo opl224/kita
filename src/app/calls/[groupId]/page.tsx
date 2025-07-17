@@ -33,6 +33,59 @@ type GroupInfo = {
 
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
 
+// Helper function to create a WAV file from raw PCM data.
+const createWavFile = (pcmData: Float32Array, sampleRate: number): Blob => {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcmData.length * numChannels * (bitsPerSample / 8);
+    const fileSize = 36 + dataSize;
+
+    const buffer = new ArrayBuffer(fileSize + 8);
+    const view = new DataView(buffer);
+
+    let offset = 0;
+
+    const writeString = (str: string) => {
+        for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset++, str.charCodeAt(i));
+        }
+    };
+
+    writeString('RIFF');
+    view.setUint32(offset, fileSize, true);
+    offset += 4;
+    writeString('WAVE');
+    writeString('fmt ');
+    view.setUint32(offset, 16, true);
+    offset += 4;
+    view.setUint16(offset, 1, true);
+    offset += 2;
+    view.setUint16(offset, numChannels, true);
+    offset += 2;
+    view.setUint32(offset, sampleRate, true);
+    offset += 4;
+    view.setUint32(offset, byteRate, true);
+    offset += 4;
+    view.setUint16(offset, blockAlign, true);
+    offset += 2;
+    view.setUint16(offset, bitsPerSample, true);
+    offset += 2;
+    writeString('data');
+    view.setUint32(offset, dataSize, true);
+    offset += 4;
+
+    for (let i = 0; i < pcmData.length; i++) {
+        const s = Math.max(-1, Math.min(1, pcmData[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+};
+
+
 export default function GroupChatPage() {
     const [user, setUser] = useState<User | null>(null);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
@@ -45,7 +98,7 @@ export default function GroupChatPage() {
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
+    const audioChunksRef = useRef<any[]>([]);
     const startTimeRef = useRef<number>(0);
     
     const params = useParams();
@@ -119,13 +172,20 @@ export default function GroupChatPage() {
         });
     };
 
-    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
+    const formatTime = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
+
+    const sendVoiceNote = async (pcmData: Float32Array, sampleRate: number, duration: number) => {
         if (!user || !groupId || duration < 0.5) return;
     
         try {
+            const audioBlob = createWavFile(pcmData, sampleRate);
             const base64data = await blobToBase64(audioBlob);
 
-            if (!base64data || !base64data.startsWith('data:audio')) {
+            if (!base64data || !base64data.startsWith('data:audio/wav')) {
                 toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
                 return;
             }
@@ -148,7 +208,7 @@ export default function GroupChatPage() {
             });
 
             await updateDoc(doc(db, 'groups', groupId), {
-                lastMessage: "Pesan suara",
+                lastMessage: `Pesan suara (${formatTime(duration)})`,
                 lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
             });
             
@@ -163,10 +223,9 @@ const startRecording = async () => {
     
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const options = { 
-            mimeType: 'audio/ogg; codecs=opus',
-            audioBitsPerSecond: 24000
-        };
+        
+        // Use a standard MIME type that gives raw audio data
+        const options = { mimeType: 'audio/webm' }; 
         
         const workerUrl = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js';
         const response = await fetch(workerUrl);
@@ -196,7 +255,7 @@ const startRecording = async () => {
 
         recorder.ondataavailable = (event) => {
             if(event.data.size > 0) {
-                audioChunksRef.current.push(event.data);
+                 audioChunksRef.current.push(event.data);
             }
         };
 
@@ -210,13 +269,28 @@ const startRecording = async () => {
             setRecordingDuration(0);
 
             if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
-                const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                sendVoiceNote(blob, finalDuration);
+                // @ts-ignore
+                const sampleRate = mediaRecorderRef.current?.sampleRate || 48000;
+                const concatenated = new Float32Array(audioChunksRef.current.reduce((acc, val) => acc + val.length, 0));
+                let offset = 0;
+                for (const chunk of audioChunksRef.current) {
+                    concatenated.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                sendVoiceNote(concatenated, sampleRate, finalDuration);
             }
             audioChunksRef.current = [];
         };
 
+        // This custom event gives us the raw PCM data we need for WAV conversion
+        recorder.addEventListener('audioprocess', (e: any) => {
+             if (e.detail) {
+                audioChunksRef.current.push(e.detail);
+             }
+        });
+
         recorder.start();
+
     } catch (err) {
         console.error("Error starting recording:", err);
         toast({ 
@@ -239,13 +313,6 @@ const startRecording = async () => {
         } else {
             startRecording();
         }
-    };
-
-
-    const formatTime = (seconds: number) => {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
     if (loading) {
