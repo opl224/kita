@@ -104,44 +104,57 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
     
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (typeof reader.result === 'string') {
+                    resolve(reader.result);
+                } else {
+                    reject(new Error('Failed to convert blob to Base64'));
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
     const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
         if (!user || !groupId || duration < 0.5) return;
     
         try {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64data = reader.result as string;
-                if (!base64data || !base64data.startsWith('data:audio')) {
-                    toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
-                    return;
-                }
-                
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                const userData = userDoc.data();
-    
-                if (!userData) {
-                    toast({ title: "Error Pengguna", description: "Data pengguna tidak ditemukan.", variant: "destructive"});
-                    return;
-                }
+            const base64data = await blobToBase64(audioBlob);
 
-                await addDoc(collection(db, 'groups', groupId, 'messages'), {
-                    senderId: user.uid,
-                    senderName: userData?.displayName || 'Pengguna Anonim',
-                    senderAvatar: userData?.avatarUrl || '',
-                    audioUrl: base64data,
-                    createdAt: serverTimestamp(),
-                    duration: Math.round(duration)
-                });
-    
-                await updateDoc(doc(db, 'groups', groupId), {
-                    lastMessage: "Pesan suara",
-                    lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
-                });
-            };
+            if (!base64data || !base64data.startsWith('data:audio')) {
+                toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
+                return;
+            }
+            
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.data();
+
+            if (!userData) {
+                toast({ title: "Error Pengguna", description: "Data pengguna tidak ditemukan.", variant: "destructive"});
+                return;
+            }
+
+            await addDoc(collection(db, 'groups', groupId, 'messages'), {
+                senderId: user.uid,
+                senderName: userData?.displayName || 'Pengguna Anonim',
+                senderAvatar: userData?.avatarUrl || '',
+                audioUrl: base64data,
+                createdAt: serverTimestamp(),
+                duration: Math.round(duration)
+            });
+
+            await updateDoc(doc(db, 'groups', groupId), {
+                lastMessage: "Pesan suara",
+                lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
+            });
+            
         } catch (error) {
             console.error("Error sending voice note:", error);
-            toast({ title: "Gagal Mengirim Pesan", variant: "destructive" });
+            toast({ title: "Gagal Mengirim Pesan", description: "Terjadi kesalahan saat mengonversi atau mengirim audio.", variant: "destructive" });
         }
     };
     
@@ -193,7 +206,7 @@ const startRecording = async () => {
             if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
             URL.revokeObjectURL(workerObjectUrl);
             
-            const finalDuration = recordingDuration;
+            const finalDuration = (Date.now() - startTimeRef.current) / 1000;
             setRecordingDuration(0);
 
             if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
@@ -282,7 +295,7 @@ const startRecording = async () => {
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                 <div className={`${neumorphicInsetStyle} flex items-center justify-end p-2 rounded-full h-20 gap-4`}>
+                 <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-4`}>
                     
                     {isRecording && (
                         <div className="flex items-center gap-2 flex-1 justify-center">
@@ -291,6 +304,8 @@ const startRecording = async () => {
                         </div>
                     )}
                     
+                    <div className="flex-1"></div>
+
                     <Button 
                         size="icon" 
                         variant={isRecording ? "destructive" : "default"}
