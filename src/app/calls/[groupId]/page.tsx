@@ -124,15 +124,21 @@ export default function GroupChatPage() {
             reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
-                if (base64data.length > 1000000) {
-                     toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
-                     resetRecording();
-                     return;
+                // Simple validation for base64 data URI
+                if (!base64data || !base64data.startsWith('data:audio')) {
+                    toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
+                    resetRecording();
+                    return;
                 }
                 
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 const userData = userDoc.data();
     
+                if (!userData) {
+                    toast({ title: "Error Pengguna", description: "Data pengguna tidak ditemukan.", variant: "destructive"});
+                    return;
+                }
+
                 const messagesColRef = collection(db, 'groups', groupId, 'messages');
                 await addDoc(messagesColRef, {
                     senderId: user.uid,
@@ -160,9 +166,14 @@ export default function GroupChatPage() {
     
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
+        if (recordingIntervalRef.current) {
+            clearInterval(recordingIntervalRef.current);
+            recordingIntervalRef.current = null;
+        }
+        setIsRecording(false);
     };
 
     const startRecording = async () => {
@@ -203,24 +214,15 @@ export default function GroupChatPage() {
             };
 
             mediaRecorderRef.current.onstop = () => {
-                setIsRecording(false);
-                if (recordingIntervalRef.current) {
-                    clearInterval(recordingIntervalRef.current);
-                }
-                
-                const finalDuration = recordingDuration;
                 stream.getTracks().forEach(track => track.stop());
-
-                if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
+                if (audioChunksRef.current.length > 0) {
                     const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
                     const audioUrl = URL.createObjectURL(blob);
-                    setRecordedAudio({ blob, duration: finalDuration, url: audioUrl });
+                    setRecordedAudio({ blob, duration: recordingDuration, url: audioUrl });
                 } else {
                    setRecordedAudio(null);
                 }
-                
                 audioChunksRef.current = [];
-                setRecordingDuration(0);
             };
 
             mediaRecorderRef.current.start();
@@ -242,12 +244,16 @@ export default function GroupChatPage() {
         if (isRecording) {
            stopRecording();
         }
+        if (recordedAudio && recordedAudio.url) {
+            URL.revokeObjectURL(recordedAudio.url);
+        }
         setRecordedAudio(null);
         if (audioRef.current) {
             audioRef.current.pause();
-            audioRef.current.currentTime = 0;
+            audioRef.current.src = '';
         }
         setIsPlaying(false);
+        setRecordingDuration(0);
     };
     
     const togglePlayback = () => {
@@ -331,20 +337,23 @@ export default function GroupChatPage() {
                                 <Send />
                             </Button>
                         </>
-                    ) : isRecording ? (
-                        <>
-                             <div className="w-14 h-14"></div>
-                             <div className="flex-1 text-center font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</div>
-                             <Button size="icon" variant="destructive" className="w-14 h-14 rounded-full bg-red-500 text-white shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" onClick={handleRecordClick}>
-                                <Square />
-                            </Button>
-                        </>
                     ) : (
                          <>
-                            <div className="w-14 h-14"></div>
-                            <div className="flex-1 text-center text-muted-foreground">Tekan untuk merekam</div>
-                            <Button size="icon" variant="default" className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" onClick={handleRecordClick}>
-                                <Mic />
+                            <div className="w-14 h-14 flex-shrink-0"></div>
+                            <div className="flex-1 text-center text-muted-foreground">
+                                {isRecording ? (
+                                    <span className="font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</span>
+                                ) : (
+                                    "Tekan untuk merekam"
+                                )}
+                            </div>
+                            <Button 
+                                size="icon" 
+                                variant={isRecording ? "destructive" : "default"} 
+                                className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" 
+                                onClick={handleRecordClick}
+                            >
+                                {isRecording ? <Square /> : <Mic />}
                             </Button>
                         </>
                     )}
@@ -353,5 +362,3 @@ export default function GroupChatPage() {
         </div>
     );
 }
-
-    
