@@ -34,47 +34,36 @@ type GroupInfo = {
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
 
 // Helper function to create a WAV file from raw PCM data.
-const createWavFile = (pcmData: Float32Array, sampleRate: number): Blob => {
+const createWavFile = (audioBuffer: ArrayBuffer, sampleRate: number): Blob => {
+    const pcmData = new Float32Array(audioBuffer);
     const numChannels = 1;
     const bitsPerSample = 16;
     const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
     const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcmData.length * numChannels * (bitsPerSample / 8);
-    const fileSize = 36 + dataSize;
-
-    const buffer = new ArrayBuffer(fileSize + 8);
+    const dataSize = pcmData.length * (bitsPerSample / 8);
+    const buffer = new ArrayBuffer(44 + dataSize);
     const view = new DataView(buffer);
 
     let offset = 0;
-
     const writeString = (str: string) => {
         for (let i = 0; i < str.length; i++) {
             view.setUint8(offset++, str.charCodeAt(i));
         }
     };
-
+    
     writeString('RIFF');
-    view.setUint32(offset, fileSize, true);
-    offset += 4;
+    view.setUint32(offset, 36 + dataSize, true); offset += 4;
     writeString('WAVE');
     writeString('fmt ');
-    view.setUint32(offset, 16, true);
-    offset += 4;
-    view.setUint16(offset, 1, true);
-    offset += 2;
-    view.setUint16(offset, numChannels, true);
-    offset += 2;
-    view.setUint32(offset, sampleRate, true);
-    offset += 4;
-    view.setUint32(offset, byteRate, true);
-    offset += 4;
-    view.setUint16(offset, blockAlign, true);
-    offset += 2;
-    view.setUint16(offset, bitsPerSample, true);
-    offset += 2;
+    view.setUint32(offset, 16, true); offset += 4;
+    view.setUint16(offset, 1, true); offset += 2; // Audio format 1 for PCM
+    view.setUint16(offset, numChannels, true); offset += 2;
+    view.setUint32(offset, sampleRate, true); offset += 4;
+    view.setUint32(offset, byteRate, true); offset += 4;
+    view.setUint16(offset, blockAlign, true); offset += 2;
+    view.setUint16(offset, bitsPerSample, true); offset += 2;
     writeString('data');
-    view.setUint32(offset, dataSize, true);
-    offset += 4;
+    view.setUint32(offset, dataSize, true); offset += 4;
 
     for (let i = 0; i < pcmData.length; i++) {
         const s = Math.max(-1, Math.min(1, pcmData[i]));
@@ -82,8 +71,9 @@ const createWavFile = (pcmData: Float32Array, sampleRate: number): Blob => {
         offset += 2;
     }
 
-    return new Blob([buffer], { type: 'audio/wav' });
+    return new Blob([view], { type: 'audio/wav' });
 };
+
 
 const AudioPlayer = ({ src }: { src: string }) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -152,7 +142,7 @@ export default function GroupChatPage() {
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const audioChunksRef = useRef<any[]>([]);
+    const audioChunksRef = useRef<Blob[]>([]);
     const startTimeRef = useRef<number>(0);
     
     const params = useParams();
@@ -232,11 +222,10 @@ export default function GroupChatPage() {
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-    const sendVoiceNote = async (pcmData: Float32Array, sampleRate: number, duration: number) => {
+    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
         if (!user || !groupId || duration < 0.5) return;
     
         try {
-            const audioBlob = createWavFile(pcmData, sampleRate);
             const base64data = await blobToBase64(audioBlob);
 
             if (!base64data || !base64data.startsWith('data:audio/wav')) {
@@ -313,7 +302,7 @@ const startRecording = async () => {
             }
         };
 
-        recorder.onstop = () => {
+        recorder.onstop = async () => {
             stream.getTracks().forEach(track => track.stop());
             setIsRecording(false);
             if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
@@ -323,27 +312,24 @@ const startRecording = async () => {
             setRecordingDuration(0);
 
             if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
-                // @ts-ignore
-                const sampleRate = mediaRecorderRef.current?.sampleRate || 48000;
-                const concatenated = new Float32Array(audioChunksRef.current.reduce((acc, val) => acc + val.length, 0));
-                let offset = 0;
-                for (const chunk of audioChunksRef.current) {
-                    concatenated.set(chunk, offset);
-                    offset += chunk.length;
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const audioContext = new AudioContext({ sampleRate: 48000 });
+                
+                try {
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    const pcmData = decodedBuffer.getChannelData(0);
+                    const wavBlob = createWavFile(pcmData, decodedBuffer.sampleRate);
+                    sendVoiceNote(wavBlob, finalDuration);
+                } catch(e) {
+                    console.error("Error processing audio: ", e);
+                    toast({title: "Gagal Proses Audio", description: "Tidak dapat memproses rekaman suara.", variant: "destructive"});
                 }
-                sendVoiceNote(concatenated, sampleRate, finalDuration);
             }
             audioChunksRef.current = [];
         };
 
-        // This custom event gives us the raw PCM data we need for WAV conversion
-        recorder.addEventListener('audioprocess', (e: any) => {
-             if (e.detail) {
-                audioChunksRef.current.push(e.detail);
-             }
-        });
-
-        recorder.start();
+        recorder.start(100); // Trigger ondataavailable every 100ms
 
     } catch (err) {
         console.error("Error starting recording:", err);
@@ -425,7 +411,7 @@ const startRecording = async () => {
                         </div>
                     )}
                     
-                    <div className="flex-1"></div>
+                    {!isRecording && <div className="flex-1"></div>}
 
                     <Button 
                         size="icon" 
