@@ -92,7 +92,12 @@ export default function VoiceNoteGroupsPage() {
     }
     
     const groupsCollection = collection(db, 'groups');
-    const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
+    // Hanya ambil grup di mana pengguna saat ini adalah anggota
+    const q = query(
+      groupsCollection, 
+      where('members', 'array-contains', user.uid), 
+      orderBy('lastMessageTime', 'desc')
+    );
 
     const unsubscribeGroups = onSnapshot(q, async (querySnapshot) => {
         const groupList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
@@ -129,7 +134,7 @@ export default function VoiceNoteGroupsPage() {
       console.error("Error fetching groups:", error);
       toast({
         title: "Gagal memuat grup",
-        description: "Terjadi kesalahan perizinan saat mengambil data.",
+        description: "Terjadi kesalahan perizinan saat mengambil data. Pastikan aturan keamanan Anda benar.",
         variant: "destructive"
       });
     });
@@ -179,8 +184,6 @@ export default function VoiceNoteGroupsPage() {
     if (!deletingGroup) return;
 
     try {
-      // Hanya menghapus dokumen grup. Pesan akan menjadi data yatim piatu
-      // dan idealnya dihapus oleh Cloud Function (backend).
       await deleteDoc(doc(db, 'groups', deletingGroup.id));
 
       toast({
