@@ -124,7 +124,6 @@ export default function GroupChatPage() {
             reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
-                // Firestore has a 1MB limit per document. We check against a slightly smaller size to be safe.
                 if (base64data.length > 1000000) {
                      toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
                      resetRecording();
@@ -163,7 +162,6 @@ export default function GroupChatPage() {
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
-            // onstop will handle the rest
         }
     };
 
