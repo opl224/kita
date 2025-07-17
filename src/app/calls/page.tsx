@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 const groupFormSchema = z.object({
   name: z.string().min(3, "Nama grup minimal 3 karakter."),
@@ -208,29 +209,46 @@ export default function VoiceNoteGroupsPage() {
         {groups.map(group => (
           <Card key={group.id} className={neumorphicCardStyle}>
             <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                    {isSuperUser && (
-                        <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 flex-shrink-0" onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup dan semua pesan di dalamnya secara permanen.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
+              {isSuperUser && (
+                  <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
+                      <AlertDialogTrigger asChild>
+                          <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="absolute top-3 left-3 text-muted-foreground hover:text-destructive h-8 w-8"
+                              onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
+                          >
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup dan semua pesan di dalamnya secara permanen.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              )}
 
+              <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-2">
+                      <div className="flex-grow min-w-0">
+                          <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
+                      </div>
+                      {isSuperUser && (
+                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6 flex-shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
+                              <Pencil className="h-4 w-4" />
+                          </Button>
+                      )}
+                  </div>
+                  
+                  <div className="flex items-center">
                     <div className="flex items-center -space-x-2">
                         {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any) => (
                           <Avatar key={member.uid} className="h-10 w-10 border-2 border-background">
@@ -244,29 +262,18 @@ export default function VoiceNoteGroupsPage() {
                             </Avatar>
                         )}
                     </div>
-                    
-                    <div className="flex-grow min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
-                            {isSuperUser && (
-                               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-6 w-6 flex-shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-
-                    <Button variant="ghost" size="icon" className="text-primary opacity-50 flex-shrink-0" onClick={() => handleGroupClick(group.id)}>
+                    <Button variant="ghost" size="icon" className="text-primary opacity-50 ml-auto" onClick={() => handleGroupClick(group.id)}>
                         <ArrowRight className="h-6 w-6" />
                         <span className="sr-only">Masuk Grup</span>
                     </Button>
-                </div>
+                  </div>
+              </div>
 
-                <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
-                    <MessageCircle className="h-4 w-4 flex-shrink-0"/>
-                    <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
-                    <span className="text-xs shrink-0">{group.lastMessageTime || ""}</span>
-                </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
+                  <MessageCircle className="h-4 w-4 flex-shrink-0"/>
+                  <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
+                  <span className="text-xs shrink-0">{group.lastMessageTime || ""}</span>
+              </div>
             </div>
           </Card>
         ))}
@@ -342,5 +349,3 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
-
-    
