@@ -90,30 +90,25 @@ const AudioPlayer = ({ src }: { src: string }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        if (!audioRef.current) return;
-        
         const audio = audioRef.current;
-        const handleEnded = () => setIsPlaying(false);
+        if (!audio) return;
         
+        const handleEnded = () => setIsPlaying(false);
         audio.addEventListener('ended', handleEnded);
-
-        // Preload the audio
-        if (src) {
-            audio.src = src;
-            audio.load();
-        }
 
         return () => {
             audio.removeEventListener('ended', handleEnded);
         };
-    }, [src]);
+    }, []);
 
     const togglePlay = () => {
-        if (!audioRef.current) return;
+        const audio = audioRef.current;
+        if (!audio) return;
+        
         if (isPlaying) {
-            audioRef.current.pause();
+            audio.pause();
         } else {
-            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+            audio.play().catch(e => console.error("Error playing audio:", e));
         }
         setIsPlaying(!isPlaying);
     };
@@ -122,7 +117,7 @@ const AudioPlayer = ({ src }: { src: string }) => {
 
     return (
         <div className="flex items-center gap-3">
-            <audio ref={audioRef} preload="metadata" />
+            <audio ref={audioRef} src={src} preload="metadata" />
             <Button
                 variant="ghost"
                 size="icon"
