@@ -42,7 +42,7 @@ type GroupInfo = {
     createdBy: string;
 }
 
-const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
+const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
 
 const AudioPlayer = ({ src }: { src: string }) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -398,7 +398,7 @@ const startRecording = async () => {
                     return (
                         <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
                            {isSender && isDeletable && (
-                               <AlertDialog>
+                                <AlertDialog>
                                    <AlertDialogTrigger asChild>
                                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center">
                                             <Trash2 className="h-4 w-4" />
@@ -416,7 +416,7 @@ const startRecording = async () => {
                                            <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Hapus</AlertDialogAction>
                                        </AlertDialogFooter>
                                    </AlertDialogContent>
-                               </AlertDialog>
+                                </AlertDialog>
                            )}
                            {!isSender && (
                                <Avatar className="h-8 w-8">
@@ -458,7 +458,7 @@ const startRecording = async () => {
                     <Button 
                         size="icon" 
                         variant={isRecording ? "destructive" : "default"}
-                        className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
+                        className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset flex-shrink-0"
                         onClick={toggleRecording}
                     >
                         {isRecording ? <Square className="h-8 w-8" /> : <Mic className="h-8 w-8" />}

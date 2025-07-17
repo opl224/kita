@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!isMobile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
-        <div className="text-center p-8 max-w-md bg-card rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626]">
+        <div className="text-center p-8 max-w-md bg-card rounded-2xl shadow-neumorphic-outset">
           <Smartphone className="mx-auto h-24 w-24 text-primary mb-6" />
           <h1 className="text-3xl font-bold font-headline mb-2 text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
             Hanya untuk Seluler

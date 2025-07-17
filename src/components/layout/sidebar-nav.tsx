@@ -81,8 +81,8 @@ export function SidebarNav() {
   }, [db, user]);
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
-  const neumorphicButton = `bg-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] ${neumorphicBase}`;
-  const activeNeumorphicButton = `bg-background shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] text-primary ${neumorphicBase}`;
+  const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
+  const activeNeumorphicButton = `bg-background shadow-neumorphic-inset text-primary ${neumorphicBase}`;
 
   return (
     <TooltipProvider>

@@ -126,8 +126,8 @@ export default function Home() {
     }
   };
 
-  const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300";
-  const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
+  const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300";
+  const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
   
   if (loading) {
     return <div>Memuat...</div>;
@@ -144,7 +144,7 @@ export default function Home() {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-             <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] cursor-pointer">
+             <Avatar className="h-16 w-16 border-2 border-background shadow-neumorphic-outset cursor-pointer">
               <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover" />
               <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
@@ -185,7 +185,7 @@ export default function Home() {
               <CardContent className="p-0">
                   <div className="space-y-4">
                       {allUsers.map((u) => (
-                          <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-[inset_3px_3px_6px_#0d0d0d,inset_-3px_-3px_6px_#262626]">
+                          <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
                               <Avatar className="h-10 w-10">
                                   <AvatarImage src={u.avatarUrl} alt={u.displayName} />
                                   <AvatarFallback>{u.displayName?.charAt(0) || '?'}</AvatarFallback>

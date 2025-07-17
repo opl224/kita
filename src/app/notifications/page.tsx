@@ -69,7 +69,7 @@ export default function NotificationsPage() {
         {loading ? (
             <p>Memuat pemberitahuan...</p>
         ) : notifications.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]">
+            <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                 <Bell className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold text-foreground">Tidak Ada Pemberitahuan</h3>
                 <p className="text-muted-foreground">Pemberitahuan baru akan muncul di sini.</p>
@@ -77,7 +77,7 @@ export default function NotificationsPage() {
         ) : (
             <div className="space-y-4">
                 {notifications.map(notif => (
-                    <Card key={notif.id} className="p-4 rounded-xl shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
+                    <Card key={notif.id} className="p-4 rounded-xl shadow-neumorphic-outset">
                         <div className="flex items-start gap-4">
                            <div className="bg-yellow-500/20 p-2 rounded-full mt-1">
                                <Coins className="h-5 w-5 text-yellow-500" />

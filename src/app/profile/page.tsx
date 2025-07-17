@@ -32,9 +32,9 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-8";
-const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] focus-visible:ring-2 focus-visible:ring-primary";
-const neumorphicButtonStyle = "h-12 text-base font-bold shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] transition-all";
+const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8";
+const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
+const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -194,7 +194,7 @@ export default function ProfilePage() {
       <Card className={neumorphicCardStyle}>
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
-            <Avatar className="h-32 w-32 border-4 border-background shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626]">
+            <Avatar className="h-32 w-32 border-4 border-background shadow-neumorphic-outset">
               <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover" />
               <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>

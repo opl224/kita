@@ -35,7 +35,7 @@ type Group = {
 };
 
 
-const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] transition-all duration-300 p-6";
+const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6";
 
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -279,7 +279,7 @@ export default function VoiceNoteGroupsPage() {
            <div className="text-center pt-4">
               <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
                 <DialogTrigger asChild>
-                  <Button variant="default" className="h-14 rounded-xl shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] transition-all text-base font-bold bg-primary text-primary-foreground">
+                  <Button variant="default" className="h-14 rounded-xl shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all text-base font-bold bg-primary text-primary-foreground">
                       <UserPlus className="mr-2"/>
                       Buat Grup Baru
                   </Button>
