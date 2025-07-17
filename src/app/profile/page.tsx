@@ -178,7 +178,6 @@ export default function ProfilePage() {
           <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
             Profil Saya
           </h1>
-          <p className="text-muted-foreground mt-1">Kelola informasi akun Anda.</p>
         </div>
         <Button
           variant="ghost"
@@ -254,7 +253,7 @@ export default function ProfilePage() {
                 <FormItem>
                   <FormLabel className="text-muted-foreground">Kata Sandi Baru</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="•••••••• (kosongkan jika tidak berubah)" {...field} className={neumorphicInputStyle} />
+                    <Input type="password" placeholder="•••••••• " {...field} className={neumorphicInputStyle} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

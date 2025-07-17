@@ -57,7 +57,6 @@ export default function NotificationsPage() {
             <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
               Pemberitahuan
             </h1>
-            <p className="text-muted-foreground mt-1">Semua pembaruan Anda ada di sini.</p>
         </div>
       </header>
 
