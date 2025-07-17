@@ -45,9 +45,7 @@ export default function GroupChatPage() {
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
-    const recordingStartTimeRef = useRef<number>(0);
-
+    
     const params = useParams();
     const groupId = params.groupId as string;
     const router = useRouter();
@@ -105,7 +103,7 @@ export default function GroupChatPage() {
     }, [user, groupId, db, router, toast]);
     
     const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
-        if (!user || !groupId) return;
+        if (!user || !groupId || duration < 0.5) return;
     
         try {
             const reader = new FileReader();
@@ -138,7 +136,6 @@ export default function GroupChatPage() {
                     lastMessage: "Pesan suara",
                     lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
                 });
-                
             };
         } catch (error) {
             console.error("Error sending voice note:", error);
@@ -146,6 +143,58 @@ export default function GroupChatPage() {
         }
     };
     
+    const startRecording = async () => {
+        if (isRecording) return;
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const options = { mimeType: 'audio/ogg; codecs=opus' };
+            const workerOptions = {
+                OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+                WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+            };
+
+            const recorder = new OpusMediaRecorder(stream, options, workerOptions);
+            mediaRecorderRef.current = recorder;
+            const audioChunks: Blob[] = [];
+            
+            recorder.onstart = () => {
+                setIsRecording(true);
+                const startTime = Date.now();
+                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+                recordingIntervalRef.current = setInterval(() => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    setRecordingDuration(elapsed);
+                }, 100);
+            };
+
+            recorder.ondataavailable = (event) => {
+                if(event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                stream.getTracks().forEach(track => track.stop());
+                setIsRecording(false);
+                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+                
+                const finalDuration = recordingDuration;
+                setRecordingDuration(0);
+
+                if (audioChunks.length > 0 && finalDuration > 0.5) {
+                    const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
+                    sendVoiceNote(blob, finalDuration);
+                }
+            };
+
+            recorder.start();
+        } catch (err) {
+            console.error("Error starting recording:", err);
+            toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
+        }
+    };
+
     const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
@@ -160,58 +209,6 @@ export default function GroupChatPage() {
         }
     };
 
-    const startRecording = async () => {
-        if (isRecording) return;
-        
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = { mimeType: 'audio/ogg; codecs=opus' };
-            const workerOptions = {
-                OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
-                WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
-            };
-
-            mediaRecorderRef.current = new OpusMediaRecorder(stream, options, workerOptions);
-            audioChunksRef.current = [];
-            
-            mediaRecorderRef.current.onstart = () => {
-                setIsRecording(true);
-                setRecordingDuration(0);
-                recordingStartTimeRef.current = Date.now();
-                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                recordingIntervalRef.current = setInterval(() => {
-                    const elapsed = (Date.now() - recordingStartTimeRef.current) / 1000;
-                    setRecordingDuration(elapsed);
-                }, 100);
-            };
-
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                if(event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-
-            mediaRecorderRef.current.onstop = () => {
-                stream.getTracks().forEach(track => track.stop());
-                setIsRecording(false);
-                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                
-                const finalDuration = recordingDuration;
-                if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
-                    const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                    sendVoiceNote(blob, finalDuration);
-                }
-                
-                audioChunksRef.current = [];
-                setRecordingDuration(0);
-            };
-
-            mediaRecorderRef.current.start();
-        } catch (err) {
-            console.error("Error starting recording:", err);
-            toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
-        }
-    };
 
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -280,6 +277,7 @@ export default function GroupChatPage() {
                         </>
                     ) : (
                         <>
+                             {/* Placeholder to push mic button to the right */}
                             <div className="flex-1"></div>
                             <Button 
                                 size="icon" 
@@ -295,3 +293,4 @@ export default function GroupChatPage() {
         </div>
     );
 }
+
