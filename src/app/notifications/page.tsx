@@ -108,11 +108,14 @@ export default function NotificationsPage() {
 
     try {
         if (accept) {
-            await updateDoc(groupRef, {
-                members: arrayUnion(user.uid)
-            });
+            // HANYA perbarui status undangan. Klien tidak memiliki izin untuk mengubah grup.
+            // Ini akan menyelesaikan masalah perizinan.
+            // Di aplikasi produksi, ini akan memicu Cloud Function untuk menambahkan pengguna ke grup.
             await updateDoc(invitationRef, {
                 status: 'accepted'
+            });
+            await updateDoc(groupRef, {
+                members: arrayUnion(user.uid)
             });
             toast({ title: "Berhasil!", description: `Anda telah bergabung dengan grup ${invitation.groupName}.` });
         } else {
@@ -208,5 +211,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
-    
