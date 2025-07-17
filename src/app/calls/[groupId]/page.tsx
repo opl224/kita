@@ -105,17 +105,6 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
     
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (audio) {
-            const onEnded = () => setIsPlaying(false);
-            audio.addEventListener('ended', onEnded);
-            return () => {
-                audio.removeEventListener('ended', onEnded);
-            }
-        }
-    }, [recordedAudio]);
-
     const sendVoiceNote = async () => {
         if (!recordedAudio || !user || !groupId) return;
     
@@ -124,7 +113,6 @@ export default function GroupChatPage() {
             reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
-                // Simple validation for base64 data URI
                 if (!base64data || !base64data.startsWith('data:audio')) {
                     toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
                     resetRecording();
@@ -139,8 +127,7 @@ export default function GroupChatPage() {
                     return;
                 }
 
-                const messagesColRef = collection(db, 'groups', groupId, 'messages');
-                await addDoc(messagesColRef, {
+                await addDoc(collection(db, 'groups', groupId, 'messages'), {
                     senderId: user.uid,
                     senderName: userData?.displayName || 'Pengguna Anonim',
                     senderAvatar: userData?.avatarUrl || '',
@@ -149,8 +136,7 @@ export default function GroupChatPage() {
                     duration: Math.round(recordedAudio.duration)
                 });
     
-                const groupDocRef = doc(db, 'groups', groupId);
-                await updateDoc(groupDocRef, {
+                await updateDoc(doc(db, 'groups', groupId), {
                     lastMessage: "Pesan suara",
                     lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
                 });
@@ -164,25 +150,16 @@ export default function GroupChatPage() {
         }
     };
     
-
     const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
-        if (recordingIntervalRef.current) {
-            clearInterval(recordingIntervalRef.current);
-            recordingIntervalRef.current = null;
-        }
-        setIsRecording(false);
     };
 
     const startRecording = async () => {
+        if (isRecording) return;
         resetRecording();
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            toast({ title: 'Error', description: 'API Perekaman tidak didukung di browser ini.', variant: 'destructive' });
-            return;
-        }
-
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const options = { mimeType: 'audio/ogg; codecs=opus' };
@@ -195,13 +172,13 @@ export default function GroupChatPage() {
             audioChunksRef.current = [];
             
             mediaRecorderRef.current.onstart = () => {
-                const startTime = Date.now();
-                setRecordingDuration(0);
                 setIsRecording(true);
+                setRecordingDuration(0);
+                const startTime = Date.now();
                 recordingIntervalRef.current = setInterval(() => {
-                    const newDuration = (Date.now() - startTime) / 1000;
-                    setRecordingDuration(newDuration);
-                    if (newDuration >= 30) {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    setRecordingDuration(elapsed);
+                    if (elapsed >= 30) {
                         stopRecording();
                     }
                 }, 100);
@@ -215,10 +192,14 @@ export default function GroupChatPage() {
 
             mediaRecorderRef.current.onstop = () => {
                 stream.getTracks().forEach(track => track.stop());
+                setIsRecording(false);
+                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+
                 if (audioChunksRef.current.length > 0) {
+                    const finalDuration = recordingDuration;
                     const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
                     const audioUrl = URL.createObjectURL(blob);
-                    setRecordedAudio({ blob, duration: recordingDuration, url: audioUrl });
+                    setRecordedAudio({ blob, duration: finalDuration, url: audioUrl });
                 } else {
                    setRecordedAudio(null);
                 }
@@ -244,7 +225,7 @@ export default function GroupChatPage() {
         if (isRecording) {
            stopRecording();
         }
-        if (recordedAudio && recordedAudio.url) {
+        if (recordedAudio?.url) {
             URL.revokeObjectURL(recordedAudio.url);
         }
         setRecordedAudio(null);
@@ -257,15 +238,26 @@ export default function GroupChatPage() {
     };
     
     const togglePlayback = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
         }
+        setIsPlaying(!isPlaying);
     };
+    
+    useEffect(() => {
+        const audio = audioRef.current;
+        const handleEnded = () => setIsPlaying(false);
+        if (audio) {
+            audio.addEventListener('ended', handleEnded);
+            return () => {
+                audio.removeEventListener('ended', handleEnded);
+            }
+        }
+    }, [recordedAudio?.url]);
+
 
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -276,6 +268,53 @@ export default function GroupChatPage() {
     if (loading) {
         return <div className="flex items-center justify-center h-screen">Memuat obrolan...</div>;
     }
+    
+    const renderFooterContent = () => {
+        if (recordedAudio) {
+            return (
+                <>
+                    <Button size="icon" variant="ghost" onClick={resetRecording} className="w-14 h-14 rounded-full flex-shrink-0">
+                        <Trash2 />
+                    </Button>
+                    <div className="flex-1 flex items-center justify-center gap-2 mx-2">
+                         <Button size="icon" variant="ghost" onClick={togglePlayback} className="rounded-full">
+                            {isPlaying ? <Pause/> : <Play />}
+                        </Button>
+                        <div className="w-full bg-muted rounded-full h-2">
+                           <div className="bg-primary h-2 rounded-full" style={{width: '100%'}}></div>
+                        </div>
+                        <span className="font-mono text-sm">{formatTime(recordedAudio.duration)}</span>
+                        <audio ref={audioRef} src={recordedAudio.url} className="hidden" />
+                    </div>
+                    <Button size="icon" variant="default" onClick={sendVoiceNote} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] flex-shrink-0">
+                        <Send />
+                    </Button>
+                </>
+            );
+        }
+
+        return (
+            <>
+                <div className="w-14 h-14 flex-shrink-0"></div>
+                 <div className="flex-1 text-center text-muted-foreground">
+                    {isRecording ? (
+                        <span className="font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</span>
+                    ) : (
+                        "Tekan untuk merekam"
+                    )}
+                </div>
+                <Button 
+                    size="icon" 
+                    variant={isRecording ? "destructive" : "default"} 
+                    className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
+                    onClick={handleRecordClick}
+                >
+                    {isRecording ? <Square /> : <Mic />}
+                </Button>
+            </>
+        );
+    };
+
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -320,44 +359,9 @@ export default function GroupChatPage() {
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-2`}>
-                    {recordedAudio ? (
-                        <>
-                            <Button size="icon" variant="ghost" onClick={resetRecording} className="w-14 h-14 rounded-full">
-                                <Trash2 />
-                            </Button>
-                            <div className="flex-1 flex items-center justify-center gap-2">
-                                 <Button size="icon" variant="ghost" onClick={togglePlayback} className="rounded-full">
-                                    {isPlaying ? <Pause/> : <Play />}
-                                </Button>
-                                <span className="font-mono text-lg">{formatTime(recordedAudio.duration)}</span>
-                                <audio ref={audioRef} src={recordedAudio.url} className="hidden" onEnded={() => setIsPlaying(false)} />
-                            </div>
-                            <Button size="icon" variant="default" onClick={sendVoiceNote} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
-                                <Send />
-                            </Button>
-                        </>
-                    ) : (
-                         <>
-                            <div className="w-14 h-14 flex-shrink-0"></div>
-                            <div className="flex-1 text-center text-muted-foreground">
-                                {isRecording ? (
-                                    <span className="font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</span>
-                                ) : (
-                                    "Tekan untuk merekam"
-                                )}
-                            </div>
-                            <Button 
-                                size="icon" 
-                                variant={isRecording ? "destructive" : "default"} 
-                                className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" 
-                                onClick={handleRecordClick}
-                            >
-                                {isRecording ? <Square /> : <Mic />}
-                            </Button>
-                        </>
-                    )}
-                </div>
+                 <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-2`}>
+                    {renderFooterContent()}
+                 </div>
             </footer>
         </div>
     );
