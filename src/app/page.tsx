@@ -3,10 +3,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users } from "lucide-react";
+import { DollarSign, Users, Coins } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,30 +16,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit } from "lucide-react";
-import { useRouter } from "next/navigation";
-
 
 const moneyFormSchema = z.object({
-  amount: z.coerce.number().min(0, "Jumlah tidak boleh negatif."),
+  amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
 });
 
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
-
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
-  const [isEditingMoney, setIsEditingMoney] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
-
+  const [totalCollected, setTotalCollected] = useState(0);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
-  const router = useRouter();
   const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<MoneyFormValues>({
@@ -61,36 +56,68 @@ export default function Home() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setUserData(data);
-          form.reset({ amount: data.moneyCollected || 0 });
         }
 
+        const usersCollection = collection(db, "users");
+        const usersSnapshot = await getDocs(usersCollection);
+        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         if (isOpank) {
-          const usersCollection = collection(db, "users");
-          const usersSnapshot = await getDocs(usersCollection);
-          const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllUsers(usersList);
+          const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
+          setTotalCollected(total);
         }
 
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth, db, form]);
+  }, [auth, db]);
 
-  const onMoneySubmit = async (data: MoneyFormValues) => {
-    if (!user) return;
+  const handleAddMoney = async (data: MoneyFormValues) => {
+    if (!user || !editingUser) return;
+    
+    const userToUpdateRef = doc(db, "users", editingUser.id);
+    const amountToAdd = data.amount;
+
     try {
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
-        moneyCollected: data.amount
+      await runTransaction(db, async (transaction) => {
+        const userToUpdateDoc = await transaction.get(userToUpdateRef);
+        if (!userToUpdateDoc.exists()) {
+          throw "Pengguna tidak ditemukan!";
+        }
+
+        const newMoneyCollected = (userToUpdateDoc.data().moneyCollected || 0) + amountToAdd;
+        transaction.update(userToUpdateRef, { moneyCollected: newMoneyCollected });
+
+        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)} untuk ${editingUser.displayName}`;
+        const notificationsCollection = collection(db, "notifications");
+        transaction.set(doc(notificationsCollection), {
+          message: notificationMessage,
+          createdAt: serverTimestamp(),
+          userId: editingUser.id,
+          userName: editingUser.displayName,
+          amount: amountToAdd,
+        });
       });
-      setUserData((prev: any) => ({ ...prev, moneyCollected: data.amount }));
+
       toast({
         title: "Berhasil",
-        description: "Jumlah uang terkumpul telah diperbarui.",
+        description: `Uang berhasil ditambahkan untuk ${editingUser.displayName}.`,
       });
-      setIsEditingMoney(false);
+
+      // Refresh data
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllUsers(usersList);
+      const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
+      setTotalCollected(total);
+
+      setEditingUser(null);
+      form.reset({ amount: 0 });
+
     } catch (error) {
+       console.error("Error adding money:", error);
        toast({
         title: "Gagal",
         description: "Gagal memperbarui jumlah uang.",
@@ -137,45 +164,12 @@ export default function Home() {
                 <div className="flex flex-col">
                   <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
                   <span className="text-3xl font-bold text-foreground">
-                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData?.moneyCollected || 0)}
+                      {isSuperUser
+                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)
+                        : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData?.moneyCollected || 0)}
                   </span>
                 </div>
               </div>
-              {isSuperUser && (
-                <Dialog open={isEditingMoney} onOpenChange={setIsEditingMoney}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-6 w-6" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Ubah Uang Terkumpul</DialogTitle>
-                      <DialogDescription>
-                        Masukkan jumlah baru untuk uang terkumpul.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onMoneySubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="amount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Jumlah (IDR)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">Simpan</Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              )}
             </div>
         </Card>
 
@@ -196,19 +190,52 @@ export default function Home() {
                                   <AvatarImage src={u.avatarUrl} alt={u.displayName} />
                                   <AvatarFallback>{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                               </Avatar>
-                              <div>
+                              <div className="flex-1">
                                   <p className="font-semibold text-foreground">{u.displayName}</p>
                                   <p className="text-sm text-muted-foreground">{u.email}</p>
                               </div>
+                              <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
+                                  <Coins className="h-5 w-5 text-yellow-500" />
+                              </Button>
                           </div>
                       ))}
                   </div>
               </CardContent>
             </Card>
           )}
-
         </aside>
       </main>
+
+      <Dialog open={!!editingUser} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
+        <DialogContent>
+            <DialogHeader>
+            <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
+            <DialogDescription>
+                Masukkan jumlah uang yang akan ditambahkan.
+            </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
+                <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Jumlah (IDR)</FormLabel>
+                    <FormControl>
+                        <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <Button type="submit" className="w-full">Tambah</Button>
+            </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+    
