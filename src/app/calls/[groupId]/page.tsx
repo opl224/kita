@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, UserPlus } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Send, Trash2, Play, Pause } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -33,19 +33,22 @@ type GroupInfo = {
 
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
 
-
 export default function GroupChatPage() {
     const [user, setUser] = useState<User | null>(null);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    // Recording states
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
+    const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
-    const recordingStartTimeRef = useRef<number | null>(null);
+    const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
     const params = useParams();
     const groupId = params.groupId as string;
@@ -103,12 +106,12 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
     
-    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
-        if (!user || !groupId) return;
+    const sendVoiceNote = async () => {
+        if (!user || !groupId || !recordedAudio) return;
     
         try {
             const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
+            reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
                 if (!base64data || !base64data.startsWith('data:audio')) {
@@ -130,15 +133,16 @@ export default function GroupChatPage() {
                     senderAvatar: userData?.avatarUrl || '',
                     audioUrl: base64data,
                     createdAt: serverTimestamp(),
-                    duration: Math.round(duration)
+                    duration: Math.round(recordedAudio.duration)
                 });
     
                 await updateDoc(doc(db, 'groups', groupId), {
                     lastMessage: "Pesan suara",
                     lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: true, locale: id })
                 });
-    
+                
                 toast({ title: "Pesan Suara Terkirim" });
+                handleDeleteRecording(); // Clear the recording after sending
             };
         } catch (error) {
             console.error("Error sending voice note:", error);
@@ -146,14 +150,23 @@ export default function GroupChatPage() {
         }
     };
     
-    const stopRecordingAndSend = () => {
+    const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
+        }
+    };
+    
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
         }
     };
 
     const startRecording = async () => {
         if (isRecording) return;
+        handleDeleteRecording();
         
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -169,12 +182,9 @@ export default function GroupChatPage() {
             mediaRecorderRef.current.onstart = () => {
                 setIsRecording(true);
                 setRecordingDuration(0);
-                recordingStartTimeRef.current = Date.now();
+                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
                 recordingIntervalRef.current = setInterval(() => {
-                    if (recordingStartTimeRef.current) {
-                       const elapsed = (Date.now() - recordingStartTimeRef.current) / 1000;
-                       setRecordingDuration(elapsed);
-                    }
+                    setRecordingDuration(prev => prev + 0.1);
                 }, 100);
             };
 
@@ -188,16 +198,14 @@ export default function GroupChatPage() {
                 stream.getTracks().forEach(track => track.stop());
                 setIsRecording(false);
                 if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                recordingIntervalRef.current = null;
-                recordingStartTimeRef.current = null;
-
-                if (audioChunksRef.current.length > 0) {
-                    const finalDuration = recordingDuration;
+                
+                const finalDuration = recordingDuration;
+                if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
                     const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                    if (finalDuration > 0.5) { // Minimal durasi 0.5 detik
-                        sendVoiceNote(blob, finalDuration);
-                    }
+                    const url = URL.createObjectURL(blob);
+                    setRecordedAudio({ blob, url, duration: finalDuration });
                 }
+                
                 audioChunksRef.current = [];
                 setRecordingDuration(0);
             };
@@ -209,14 +217,27 @@ export default function GroupChatPage() {
         }
     };
 
-    const handleInteractionStart = () => {
-        startRecording();
+    const handleDeleteRecording = () => {
+        if (recordedAudio) {
+            URL.revokeObjectURL(recordedAudio.url);
+        }
+        setRecordedAudio(null);
+        setIsPlaying(false);
+        if(audioPlayerRef.current) {
+            audioPlayerRef.current.pause();
+            audioPlayerRef.current.currentTime = 0;
+        }
     };
-
-    const handleInteractionEnd = () => {
-        stopRecordingAndSend();
+    
+    const togglePlayPause = () => {
+        if (audioPlayerRef.current) {
+            if (isPlaying) {
+                audioPlayerRef.current.pause();
+            } else {
+                audioPlayerRef.current.play();
+            }
+        }
     };
-
 
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -272,24 +293,55 @@ export default function GroupChatPage() {
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
                  <div className={`${neumorphicInsetStyle} flex items-center justify-center p-2 rounded-full h-20 gap-4`}>
-                     {isRecording && (
-                        <div className="flex items-center gap-2 min-w-[100px] justify-center">
-                            <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
-                            <span className="font-mono text-lg text-foreground">{formatTime(recordingDuration)}</span>
-                        </div>
+                    
+                    {isRecording ? (
+                        // Recording state
+                        <>
+                            <div className="flex items-center gap-2 min-w-[100px] justify-center">
+                                <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
+                                <span className="font-mono text-lg text-foreground">{formatTime(recordingDuration)}</span>
+                            </div>
+                            <Button size="icon" variant="destructive" className="w-16 h-16 rounded-full flex-shrink-0" onClick={toggleRecording}>
+                                <Square className="h-8 w-8" />
+                            </Button>
+                        </>
+                    ) : recordedAudio ? (
+                        // Preview state
+                        <>
+                            <Button size="icon" variant="ghost" onClick={handleDeleteRecording}>
+                                <Trash2 className="h-6 w-6 text-destructive" />
+                            </Button>
+                            <div className="flex-1 flex items-center gap-2">
+                                <Button size="icon" variant="secondary" onClick={togglePlayPause}>
+                                    {isPlaying ? <Pause className="h-5 w-5"/> : <Play className="h-5 w-5"/>}
+                                </Button>
+                                <audio 
+                                    ref={audioPlayerRef} 
+                                    src={recordedAudio.url} 
+                                    className="hidden"
+                                    onPlay={() => setIsPlaying(true)}
+                                    onPause={() => setIsPlaying(false)}
+                                    onEnded={() => setIsPlaying(false)}
+                                />
+                                <span className="font-mono text-lg text-foreground">{formatTime(recordedAudio.duration)}</span>
+                            </div>
+                            <Button size="icon" variant="default" className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex-shrink-0" onClick={sendVoiceNote}>
+                                <Send className="h-8 w-8" />
+                            </Button>
+                        </>
+                    ) : (
+                        // Initial state
+                        <>
+                            <Button 
+                                size="icon" 
+                                className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
+                                onClick={toggleRecording}
+                            >
+                                <Mic className="h-8 w-8" />
+                            </Button>
+                        </>
                     )}
-                    <Button 
-                        size="icon" 
-                        variant={isRecording ? "destructive" : "default"} 
-                        className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
-                        onMouseDown={handleInteractionStart}
-                        onMouseUp={handleInteractionEnd}
-                        onTouchStart={handleInteractionStart}
-                        onTouchEnd={handleInteractionEnd}
-                    >
-                        <Mic className="h-8 w-8" />
-                    </Button>
-                     {!isRecording && <p className="text-muted-foreground">Tahan untuk merekam</p>}
+
                  </div>
             </footer>
         </div>
