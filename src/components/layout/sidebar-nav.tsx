@@ -2,11 +2,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useEffect, useState } from 'react';
+import { useEffect, useState }from 'react';
 import { getFirestore, collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
@@ -21,68 +21,73 @@ export const menuItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [notificationCount, setNotificationCount] = useState(0);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [totalUnseenCount, setTotalUnseenCount] = useState(0);
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
+      setUser(currentUser);
+      if (!currentUser) {
+        setTotalUnseenCount(0);
+      }
     });
     return () => unsubscribeAuth();
   }, [auth]);
 
   useEffect(() => {
     if (!user) {
-        setNotificationCount(0);
-        return;
-    }
-
-    // Jika pengguna sedang berada di halaman notifikasi, langsung set count ke 0 dan hentikan.
-    // Pembaruan timestamp akan ditangani oleh halaman notifikasi itu sendiri.
-    if (pathname === '/notifications') {
-      setNotificationCount(0);
       return;
     }
 
-    const userDocRef = doc(db, "users", user.uid);
-    let unsubscribeNotifications: () => void = () => {};
+    if (pathname === '/notifications') {
+      setTotalUnseenCount(0);
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
 
     const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
-        if (!userSnap.exists()) return;
-        
-        const userData = userSnap.data();
-        const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
-        
-        const q = query(
-            collection(db, "notifications"),
-            where("createdAt", ">", lastSeen)
-        );
+      if (!userSnap.exists()) return;
 
-        // Hentikan listener sebelumnya sebelum memulai yang baru
+      const userData = userSnap.data();
+      const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
+
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('createdAt', '>', lastSeen)
+      );
+      
+      const invitationsQuery = query(
+        collection(db, 'invitations'),
+        where('userId', '==', user.uid),
+        where('status', '==', 'pending')
+      );
+
+      let unseenNotifications = 0;
+      let unseenInvitations = 0;
+
+      const unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+        unseenNotifications = snapshot.size;
+        setTotalUnseenCount(unseenNotifications + unseenInvitations);
+      });
+
+      const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
+        unseenInvitations = snapshot.size;
+        setTotalUnseenCount(unseenNotifications + unseenInvitations);
+      });
+
+      return () => {
         unsubscribeNotifications();
-        
-        unsubscribeNotifications = onSnapshot(q, (querySnapshot) => {
-            // Hanya update count jika tidak di halaman notifikasi
-            if (pathname !== '/notifications') {
-                setNotificationCount(querySnapshot.size);
-            } else {
-                setNotificationCount(0);
-            }
-        }, (error) => {
-            console.error("Error fetching notification count:", error);
-        });
-
+        unsubscribeInvitations();
+      };
     }, (error) => {
-        console.error("Error fetching user data for notifications:", error);
+      console.error("Error fetching user data for notifications:", error);
     });
 
     return () => {
       unsubscribeUser();
-      unsubscribeNotifications();
     };
   }, [db, user, pathname]);
 
@@ -97,7 +102,7 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const isNotificationItem = item.notificationKey === 'notifications';
-            const hasNotification = isNotificationItem && notificationCount > 0;
+            const hasNotification = isNotificationItem && totalUnseenCount > 0;
 
             return (
               <Tooltip key={item.href}>

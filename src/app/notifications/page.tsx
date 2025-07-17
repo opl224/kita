@@ -2,7 +2,7 @@
 'use client';
 
 import { Card } from "@/components/ui/card";
-import { Bell, Coins, UserCheck, UserX, Loader2 } from "lucide-react";
+import { Bell, Coins, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp, where, arrayUnion } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
@@ -40,20 +40,14 @@ export default function NotificationsPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        // Mark general notifications as seen
-        const userDocRef = doc(db, "users", currentUser.uid);
-        updateDoc(userDocRef, {
-          lastSeenNotifications: serverTimestamp()
-        }).catch(err => console.error("Error updating last seen timestamp:", err));
-      } else {
+      if (!currentUser) {
         setLoading(false);
       }
     });
     return () => unsubscribeAuth();
-  }, [auth, db]);
+  }, [auth]);
 
-  // Effect to fetch notifications and invitations
+  // Effect to fetch notifications, invitations and update last seen timestamp
   useEffect(() => {
     if (!user) {
         setNotifications([]);
@@ -61,6 +55,12 @@ export default function NotificationsPage() {
         setLoading(false);
         return;
     }
+
+    // Mark all notifications as seen when the user visits this page
+    const userDocRef = doc(db, "users", user.uid);
+    updateDoc(userDocRef, {
+      lastSeenNotifications: serverTimestamp()
+    }).catch(err => console.error("Error updating last seen timestamp:", err));
     
     // Fetch general notifications
     const notifQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
