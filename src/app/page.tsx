@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -82,7 +82,8 @@ export default function Home() {
             </Avatar>
           </DialogTrigger>
           <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
-            <img src={userData?.avatarUrl} alt="Avatar Pengguna" className="max-h-[80vh] w-auto rounded-lg" />
+             <DialogTitle className="sr-only">Avatar Pengguna</DialogTitle>
+            <img src={userData?.avatarUrl} alt="Avatar Pengguna diperbesar" className="max-h-[80vh] w-auto rounded-lg" />
           </DialogContent>
         </Dialog>
       </header>
