@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Smartphone } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
+import { cn } from '@/lib/utils';
 
 const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
 
@@ -75,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <main className={cn("flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8", "animate-in fade-in-50")}>
         {children}
       </main>
       <SidebarNav />
