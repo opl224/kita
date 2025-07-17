@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -73,10 +74,17 @@ export default function Home() {
             {userData?.displayName || 'Pengguna'}
           </h1>
         </div>
-        <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
-          <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" />
-          <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-        </Avatar>
+        <Dialog>
+          <DialogTrigger>
+            <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
+              <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover" />
+              <AvatarFallback>{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+            </Avatar>
+          </DialogTrigger>
+          <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
+            <img src={userData?.avatarUrl} alt="Avatar Pengguna" className="max-h-[80vh] w-auto rounded-lg" />
+          </DialogContent>
+        </Dialog>
       </header>
       
       <main className="flex flex-col gap-8">
@@ -138,4 +146,3 @@ export default function Home() {
     </div>
   );
 }
-
