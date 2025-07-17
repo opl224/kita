@@ -1,12 +1,52 @@
 'use client';
 
-import React from 'react';
+import React, { useState, TouchEvent } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Smartphone } from 'lucide-react';
-import { SidebarNav } from './sidebar-nav';
+import { SidebarNav, menuItems } from './sidebar-nav';
+
+const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const handleTouchStart = (e: TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > SWIPE_THRESHOLD;
+    const isRightSwipe = distance < -SWIPE_THRESHOLD;
+
+    const currentIndex = menuItems.findIndex((item) => item.href === pathname);
+    
+    if (isLeftSwipe) {
+      // Swipe ke kiri, navigasi ke halaman berikutnya
+      if (currentIndex < menuItems.length - 1) {
+        router.push(menuItems[currentIndex + 1].href);
+      }
+    } else if (isRightSwipe) {
+      // Swipe ke kanan, navigasi ke halaman sebelumnya
+      if (currentIndex > 0) {
+        router.push(menuItems[currentIndex - 1].href);
+      }
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
 
   if (isMobile === undefined) {
     return null; // Atau tampilkan pemuat
@@ -29,7 +69,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div 
+      className="flex flex-col h-screen"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         {children}
       </main>

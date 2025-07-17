@@ -6,7 +6,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const menuItems = [
+export const menuItems = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/calls', label: 'Panggilan', icon: Phone },
   { href: '/notifications', label: 'Notifikasi', icon: Bell },
