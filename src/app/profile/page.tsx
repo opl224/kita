@@ -5,10 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { getAuth, signOut, onAuthStateChanged, User, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getAuth, signOut, onAuthStateChanged, User, updatePassword } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import { app } from "@/lib/firebase";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,9 @@ export default function ProfilePage() {
   const db = getFirestore(app);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -65,6 +69,7 @@ export default function ProfilePage() {
             displayName: userData.displayName,
             email: userData.email,
           });
+          setAvatarUrl(userData.avatarUrl);
         }
       } else {
         router.push('/login');
@@ -74,18 +79,58 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, [auth, db, router, form]);
 
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !user) return;
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        try {
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, {
+                avatarUrl: base64data
+            });
+            setAvatarUrl(base64data);
+            toast({
+                title: "Avatar Diperbarui",
+                description: "Avatar Anda telah berhasil diubah.",
+            });
+        } catch (error) {
+            console.error("Error uploading avatar: ", error);
+            toast({
+                title: "Gagal Mengunggah",
+                description: "Terjadi kesalahan saat mengubah avatar Anda.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+    reader.onerror = (error) => {
+        console.error("Error reading file:", error);
+        toast({
+            title: "Gagal Membaca File",
+            description: "Tidak dapat memproses file yang Anda pilih.",
+            variant: "destructive",
+        });
+        setIsUploading(false);
+    };
+  };
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) return;
     
     try {
-        if(data.displayName !== user.displayName) {
-            await setDoc(doc(db, "users", user.uid), { displayName: data.displayName }, { merge: true });
+        if(data.displayName !== form.getValues('displayName')) {
+            await updateDoc(doc(db, "users", user.uid), { displayName: data.displayName });
         }
         
         if (data.password) {
-            // Re-authentication is often needed for sensitive operations like changing a password.
-            // This is a simplified version. For a real app, you'd prompt for the *current* password.
             await updatePassword(user, data.password);
         }
 
@@ -94,6 +139,7 @@ export default function ProfilePage() {
             description: "Informasi profil Anda telah berhasil disimpan.",
         });
     } catch(error) {
+        console.error("Error updating profile:", error);
         toast({
             title: "Gagal Memperbarui Profil",
             description: "Terjadi kesalahan saat menyimpan perubahan.",
@@ -136,11 +182,23 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-background shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626]">
-              <AvatarImage src={form.getValues('displayName') ? `https://placehold.co/128x128.png?text=${form.getValues('displayName').charAt(0)}` : ''} alt="User Avatar" data-ai-hint="user avatar" />
+              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" />
               <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
-            <Button size="icon" className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary text-primary-foreground`}>
-                <Camera className="h-5 w-5"/>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleAvatarChange} 
+                className="hidden" 
+                accept="image/*"
+            />
+            <Button 
+                size="icon" 
+                className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary text-primary-foreground`}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+            >
+                {isUploading ? <Loader className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5"/>}
                 <span className="sr-only">Ubah Avatar</span>
             </Button>
           </div>
