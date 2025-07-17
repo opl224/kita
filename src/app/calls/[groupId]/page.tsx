@@ -42,12 +42,14 @@ export default function GroupChatPage() {
     const [loading, setLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-    const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
     const [recordingDuration, setRecordingDuration] = useState(0);
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const recordingStartTimeRef = useRef<number | null>(null);
+    const finalRecordingDurationRef = useRef<number>(0);
+
 
     const params = useParams();
     const groupId = params.groupId as string;
@@ -108,6 +110,23 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router, toast]);
 
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            if(recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+                recordingIntervalRef.current = null;
+            }
+            if (recordingStartTimeRef.current) {
+                finalRecordingDurationRef.current = Math.round((Date.now() - recordingStartTimeRef.current) / 1000);
+            }
+            setRecordingDuration(0);
+            recordingStartTimeRef.current = null;
+        }
+    };
+
+
     const startRecording = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             toast({ title: 'Error', description: 'API Perekaman tidak didukung di browser ini.', variant: 'destructive' });
@@ -125,6 +144,7 @@ export default function GroupChatPage() {
             };
             mediaRecorderRef.current = new OpusMediaRecorder(stream, options, workerOptions);
             audioChunksRef.current = [];
+            setAudioBlob(null);
 
             mediaRecorderRef.current.ondataavailable = (event) => {
                 audioChunksRef.current.push(event.data);
@@ -133,16 +153,23 @@ export default function GroupChatPage() {
             mediaRecorderRef.current.onstop = () => {
                 const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
                 setAudioBlob(blob);
+                // Get rid of the media stream tracks
+                stream.getTracks().forEach(track => track.stop());
             };
 
             mediaRecorderRef.current.start();
             setIsRecording(true);
-            setRecordingStartTime(Date.now());
+            recordingStartTimeRef.current = Date.now();
+            
+            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+
             recordingIntervalRef.current = setInterval(() => {
-                const duration = (Date.now() - (recordingStartTime ?? Date.now())) / 1000;
-                setRecordingDuration(duration);
-                if (duration >= 30) {
-                    stopRecording();
+                if(recordingStartTimeRef.current){
+                    const duration = (Date.now() - recordingStartTimeRef.current) / 1000;
+                    setRecordingDuration(duration);
+                    if (duration >= 30) {
+                        stopRecording();
+                    }
                 }
             }, 100);
 
@@ -152,19 +179,12 @@ export default function GroupChatPage() {
         }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-            setRecordingDuration(0);
-        }
-    };
 
     const cancelRecording = () => {
         stopRecording();
         setAudioBlob(null);
         audioChunksRef.current = [];
+        finalRecordingDurationRef.current = 0;
     };
 
     const sendVoiceNote = async () => {
@@ -191,7 +211,7 @@ export default function GroupChatPage() {
                     senderAvatar: userData?.avatarUrl || '',
                     audioUrl: base64data,
                     createdAt: serverTimestamp(),
-                    duration: Math.round((Date.now() - (recordingStartTime ?? Date.now())) / 1000)
+                    duration: finalRecordingDurationRef.current
                 });
 
                 // Update last message in group
@@ -202,6 +222,7 @@ export default function GroupChatPage() {
                 })
 
                 setAudioBlob(null);
+                finalRecordingDurationRef.current = 0;
                 toast({ title: "Pesan Suara Terkirim" });
             };
         } catch (error) {
@@ -279,7 +300,15 @@ export default function GroupChatPage() {
                     ) : (
                         <>
                             <div className="flex-1 text-center text-muted-foreground">Tahan untuk merekam</div>
-                            <Button size="icon" variant="default" className="rounded-full w-14 h-14 bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}>
+                            <Button 
+                                size="icon" 
+                                variant="default" 
+                                className="rounded-full w-14 h-14 bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" 
+                                onMouseDown={startRecording} 
+                                onMouseUp={stopRecording} 
+                                onTouchStart={(e) => {e.preventDefault(); startRecording();}} 
+                                onTouchEnd={(e) => {e.preventDefault(); stopRecording();}}
+                            >
                                 <Mic />
                             </Button>
                         </>
