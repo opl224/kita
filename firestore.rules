@@ -4,21 +4,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /groups/{groupId} {
-      allow read, create: if request.auth != null;
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+    }
 
+    match /groups/{groupId} {
+      // Allow authenticated users to list groups for the main page
+      allow list, get: if request.auth != null;
+      
+      // Allow authenticated users to create groups
+      allow create: if request.auth != null;
+      
+      // Allow members to update the group (e.g., add new members, update last message)
+      allow update: if request.auth.uid in resource.data.members || request.auth.uid == resource.data.createdBy;
+      
+      // Allow members to read/write messages
       match /messages/{messageId} {
         allow read, create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
       }
-    }
-
-    match /users/{userId} {
-      // Allow any authenticated user to read user profiles (for names, avatars, etc.)
-      allow read: if request.auth != null;
-      // Allow users to update only their own profile
-      allow update: if request.auth.uid == userId;
-      // Disallow direct creation/deletion from client
-      allow create, delete: if false;
     }
   }
 }
