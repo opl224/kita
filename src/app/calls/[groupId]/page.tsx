@@ -45,6 +45,7 @@ export default function GroupChatPage() {
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     
     const params = useParams();
     const groupId = params.groupId as string;
@@ -143,57 +144,67 @@ export default function GroupChatPage() {
         }
     };
     
-    const startRecording = async () => {
-        if (isRecording) return;
+const startRecording = async () => {
+    if (isRecording) return;
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const options = { 
+            mimeType: 'audio/ogg; codecs=opus',
+            audioBitsPerSecond: 24000
+        };
         
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = { mimeType: 'audio/ogg; codecs=opus' };
-            const workerOptions = {
-                OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
-                WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
-            };
+        const workerOptions = {
+            encoderWorkerFactory: () => new Worker('https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js'),
+            OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+            WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+        };
 
-            const recorder = new OpusMediaRecorder(stream, options, workerOptions);
-            mediaRecorderRef.current = recorder;
-            const audioChunks: Blob[] = [];
+        const recorder = new OpusMediaRecorder(stream, options, workerOptions);
+        mediaRecorderRef.current = recorder;
+        audioChunksRef.current = [];
+        
+        recorder.onstart = () => {
+            setIsRecording(true);
+            const startTime = Date.now();
+            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+            recordingIntervalRef.current = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                setRecordingDuration(elapsed);
+            }, 100);
+        };
+
+        recorder.ondataavailable = (event) => {
+            if(event.data.size > 0) {
+                audioChunksRef.current.push(event.data);
+            }
+        };
+
+        recorder.onstop = () => {
+            stream.getTracks().forEach(track => track.stop());
+            setIsRecording(false);
+            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
             
-            recorder.onstart = () => {
-                setIsRecording(true);
-                const startTime = Date.now();
-                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                recordingIntervalRef.current = setInterval(() => {
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    setRecordingDuration(elapsed);
-                }, 100);
-            };
+            const finalDuration = recordingDuration;
+            setRecordingDuration(0);
 
-            recorder.ondataavailable = (event) => {
-                if(event.data.size > 0) {
-                    audioChunks.push(event.data);
-                }
-            };
+            if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+                sendVoiceNote(blob, finalDuration);
+            }
+            audioChunksRef.current = [];
+        };
 
-            recorder.onstop = () => {
-                stream.getTracks().forEach(track => track.stop());
-                setIsRecording(false);
-                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                
-                const finalDuration = recordingDuration;
-                setRecordingDuration(0);
-
-                if (audioChunks.length > 0 && finalDuration > 0.5) {
-                    const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
-                    sendVoiceNote(blob, finalDuration);
-                }
-            };
-
-            recorder.start();
-        } catch (err) {
-            console.error("Error starting recording:", err);
-            toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
-        }
-    };
+        recorder.start();
+    } catch (err) {
+        console.error("Error starting recording:", err);
+        toast({ 
+            title: 'Gagal Memulai Rekaman', 
+            description: err instanceof Error ? err.message : 'Pastikan Anda telah memberikan izin mikrofon.', 
+            variant: 'destructive' 
+        });
+    }
+};
 
     const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -293,4 +304,3 @@ export default function GroupChatPage() {
         </div>
     );
 }
-
