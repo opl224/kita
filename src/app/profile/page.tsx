@@ -10,7 +10,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import { app } from "@/lib/firebase";
 import { useEffect, useState, useRef } from "react";
-import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, LogOut, Loader, Moon, Sun } from "lucide-react";
+import { Camera, LogOut, Loader } from "lucide-react";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Nama tampilan minimal 2 karakter."),
@@ -46,8 +45,6 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
-
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -180,17 +177,6 @@ export default function ProfilePage() {
               Profil Saya
             </h1>
             <p className="text-muted-foreground mt-1">Kelola informasi akun Anda.</p>
-        </div>
-         <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-            <Avatar className="h-16 w-16 border-2 border-background shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] cursor-pointer">
-              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover" />
-              <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
         </div>
       </header>
 
