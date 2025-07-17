@@ -65,9 +65,6 @@ export default function NotificationsPage() {
             </h1>
             <p className="text-muted-foreground mt-1">Semua pembaruan Anda ada di sini.</p>
         </div>
-        <Button className="shadow-[3px_3px_6px_#0d0d0d,-3px_-3px_6px_#262626] active:shadow-[inset_3px_3px_6px_#0d0d0d,inset_-3px_-3px_6px_#262626]">
-            Tandai semua sudah dibaca
-        </Button>
       </header>
 
       <main className="space-y-4">
