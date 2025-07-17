@@ -81,7 +81,10 @@ export default function VoiceNoteGroupsPage() {
   }, [auth]);
 
   useEffect(() => {
-    if (loading) return; 
+    if (!user) {
+        setGroups([]); // Clear groups if user logs out
+        return;
+    }; 
 
     const groupsCollection = collection(db, 'groups');
     const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
@@ -93,16 +96,27 @@ export default function VoiceNoteGroupsPage() {
         
         if (allMemberIds.length > 0) {
             const usersCollection = collection(db, 'users');
-            const usersQuery = query(usersCollection, where(documentId(), 'in', allMemberIds));
-            const usersSnapshot = await getDocs(usersQuery);
-            const usersData = usersSnapshot.docs.reduce((acc, doc) => {
-                acc[doc.id] = doc.data();
-                return acc;
-            }, {} as any);
+            // Firestore 'in' query supports a maximum of 30 elements in the array.
+            // For larger member lists, you might need to chunk the requests.
+            const userChunks: string[][] = [];
+            for (let i = 0; i < allMemberIds.length; i += 30) {
+              userChunks.push(allMemberIds.slice(i, i + 30));
+            }
+
+            const usersData: any = {};
+            for (const chunk of userChunks) {
+              if (chunk.length > 0) {
+                const usersQuery = query(usersCollection, where(documentId(), 'in', chunk));
+                const usersSnapshot = await getDocs(usersQuery);
+                usersSnapshot.docs.forEach(doc => {
+                    usersData[doc.id] = doc.data();
+                });
+              }
+            }
 
             const populatedGroups = groupList.map(group => ({
                 ...group,
-                members: group.members.map((memberId: string) => usersData[memberId]).filter(Boolean),
+                members: (group.members || []).map((memberId: string) => usersData[memberId]).filter(Boolean),
             }));
             setGroups(populatedGroups);
         } else {
@@ -112,7 +126,7 @@ export default function VoiceNoteGroupsPage() {
 
     return () => unsubscribeGroups();
 
-  }, [db, loading]);
+  }, [db, user]);
 
   const onGroupSubmit = async (data: GroupFormValues) => {
     if (!user) return;
@@ -346,3 +360,5 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
+
+    
