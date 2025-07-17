@@ -182,7 +182,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-background shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626]">
-              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" />
+              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover" />
               <AvatarFallback>{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <input 
