@@ -31,7 +31,6 @@ type GroupInfo = {
     createdBy: string;
 }
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] p-4";
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
 
 
@@ -125,8 +124,10 @@ export default function GroupChatPage() {
             reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
-                if (base64data.length > 1048576) { // 1MB limit
+                // Firestore has a 1MB limit per document. We check against a slightly smaller size to be safe.
+                if (base64data.length > 1000000) {
                      toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
+                     resetRecording();
                      return;
                 }
                 
@@ -162,14 +163,12 @@ export default function GroupChatPage() {
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            if (recordingIntervalRef.current) {
-                clearInterval(recordingIntervalRef.current);
-            }
+            // onstop will handle the rest
         }
     };
 
     const startRecording = async () => {
+        resetRecording();
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             toast({ title: 'Error', description: 'API Perekaman tidak didukung di browser ini.', variant: 'destructive' });
             return;
@@ -189,6 +188,7 @@ export default function GroupChatPage() {
             mediaRecorderRef.current.onstart = () => {
                 const startTime = Date.now();
                 setRecordingDuration(0);
+                setIsRecording(true);
                 recordingIntervalRef.current = setInterval(() => {
                     const newDuration = (Date.now() - startTime) / 1000;
                     setRecordingDuration(newDuration);
@@ -199,18 +199,26 @@ export default function GroupChatPage() {
             };
 
             mediaRecorderRef.current.ondataavailable = (event) => {
-                audioChunksRef.current.push(event.data);
+                if(event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
             };
 
             mediaRecorderRef.current.onstop = () => {
-                const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-                const finalDuration = recordingDuration;
+                setIsRecording(false);
+                if (recordingIntervalRef.current) {
+                    clearInterval(recordingIntervalRef.current);
+                }
                 
+                const finalDuration = recordingDuration;
                 stream.getTracks().forEach(track => track.stop());
 
-                if (blob.size > 0 && finalDuration > 0.5) {
+                if (audioChunksRef.current.length > 0 && finalDuration > 0.5) {
+                    const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
                     const audioUrl = URL.createObjectURL(blob);
                     setRecordedAudio({ blob, duration: finalDuration, url: audioUrl });
+                } else {
+                   setRecordedAudio(null);
                 }
                 
                 audioChunksRef.current = [];
@@ -218,7 +226,6 @@ export default function GroupChatPage() {
             };
 
             mediaRecorderRef.current.start();
-            setIsRecording(true);
         } catch (err) {
             console.error("Error starting recording:", err);
             toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
@@ -229,18 +236,20 @@ export default function GroupChatPage() {
         if (isRecording) {
             stopRecording();
         } else {
-            resetRecording();
             startRecording();
         }
     };
 
     const resetRecording = () => {
-        setRecordedAudio(null);
-        setIsRecording(false);
-        setRecordingDuration(0);
-        if (recordingIntervalRef.current) {
-            clearInterval(recordingIntervalRef.current);
+        if (isRecording) {
+           stopRecording();
         }
+        setRecordedAudio(null);
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        setIsPlaying(false);
     };
     
     const togglePlayback = () => {
@@ -318,7 +327,7 @@ export default function GroupChatPage() {
                                     {isPlaying ? <Pause/> : <Play />}
                                 </Button>
                                 <span className="font-mono text-lg">{formatTime(recordedAudio.duration)}</span>
-                                <audio ref={audioRef} src={recordedAudio.url} className="hidden" />
+                                <audio ref={audioRef} src={recordedAudio.url} className="hidden" onEnded={() => setIsPlaying(false)} />
                             </div>
                             <Button size="icon" variant="default" onClick={sendVoiceNote} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
                                 <Send />
@@ -346,5 +355,3 @@ export default function GroupChatPage() {
         </div>
     );
 }
-
-    
