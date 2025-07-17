@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, DollarSign, Phone, Users } from "lucide-react";
+import { DollarSign, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "firebase/firestore";
@@ -180,20 +180,6 @@ export default function Home() {
         </Card>
 
         <aside className="flex flex-col gap-8">
-          <Card className={`${neumorphicCardStyle} p-6`}>
-            <h3 className="text-xl font-headline font-semibold mb-4 text-foreground">Tindakan Cepat</h3>
-            <div className="flex flex-col gap-4">
-                <Button variant="default" size="lg" className="w-full justify-start text-left h-14 bg-primary text-primary-foreground shadow-[3px_3px_6px_#0d0d0d,-3px_-3px_6px_#262626] active:shadow-[inset_3px_3px_6px_#0d0d0d,inset_-3px_-3px_6px_#262626]" onClick={() => router.push('/calls')}>
-                    <Phone className="mr-3" />
-                    Buka Panggilan Grup
-                </Button>
-                <Button variant="secondary" size="lg" className="w-full justify-start text-left h-14 shadow-[3px_3px_6px_#0d0d0d,-3px_-3px_6px_#262626] active:shadow-[inset_3px_3px_6px_#0d0d0d,inset_-3px_-3px_6px_#262626]" onClick={() => router.push('/notifications')}>
-                    <Bell className="mr-3" />
-                    Lihat Notifikasi
-                </Button>
-            </div>
-          </Card>
-
            {isSuperUser && (
             <Card className={`${neumorphicCardStyle} p-6`}>
               <CardHeader className="p-0 mb-4">
