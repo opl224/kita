@@ -175,21 +175,28 @@ export default function GroupChatPage() {
 
         const groupDocRef = doc(db, 'groups', groupId);
         const getGroupInfo = async () => {
-            const docSnap = await getDoc(groupDocRef);
-            if (docSnap.exists()) {
-                const groupData = docSnap.data() as GroupInfo;
-                setGroupInfo(groupData);
+            try {
+                const docSnap = await getDoc(groupDocRef);
+                if (docSnap.exists()) {
+                    const groupData = docSnap.data() as GroupInfo;
+                    setGroupInfo(groupData);
 
-                if (!groupData.members.includes(user.uid)) {
-                    await updateDoc(groupDocRef, {
-                        members: arrayUnion(user.uid)
-                    });
+                    if (!groupData.members.includes(user.uid)) {
+                        await updateDoc(groupDocRef, {
+                            members: arrayUnion(user.uid)
+                        });
+                    }
+                } else {
+                    toast({ title: "Grup tidak ditemukan", variant: "destructive" });
+                    router.push('/calls');
                 }
-            } else {
-                toast({ title: "Grup tidak ditemukan", variant: "destructive" });
+            } catch (error) {
+                console.error("Error getting group info:", error);
+                toast({ title: "Gagal memuat grup", variant: "destructive" });
                 router.push('/calls');
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         getGroupInfo();
 
@@ -397,6 +404,14 @@ const startRecording = async () => {
 
                     return (
                         <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                           
+                           {!isSender && (
+                               <Avatar className="h-8 w-8">
+                                   <AvatarImage src={msg.senderAvatar} />
+                                   <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
+                               </Avatar>
+                           )}
+                           
                            {isSender && isDeletable && (
                                 <AlertDialog>
                                    <AlertDialogTrigger asChild>
@@ -418,12 +433,7 @@ const startRecording = async () => {
                                    </AlertDialogContent>
                                 </AlertDialog>
                            )}
-                           {!isSender && (
-                               <Avatar className="h-8 w-8">
-                                   <AvatarImage src={msg.senderAvatar} />
-                                   <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
-                               </Avatar>
-                           )}
+
                            <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
                                 {!isSender && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
                                 <Card className={`p-2 rounded-xl border-none ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
