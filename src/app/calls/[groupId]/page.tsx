@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, Send, Trash2, UserPlus, Square } from 'lucide-react';
+import { ArrowLeft, Mic, Send, Trash2, UserPlus, Square, Play, Pause } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -20,7 +20,7 @@ type Message = {
     senderId: string;
     senderName: string;
     senderAvatar: string;
-    audioUrl: string; // Base64 data URI
+    audioUrl: string; 
     createdAt: any;
     duration: number;
 };
@@ -34,6 +34,7 @@ type GroupInfo = {
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-[6px_6px_12px_#0d0d0d,-6px_-6px_12px_#262626] p-4";
 const neumorphicInsetStyle = "bg-background rounded-2xl shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]";
 
+
 export default function GroupChatPage() {
     const [user, setUser] = useState<User | null>(null);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
@@ -41,12 +42,13 @@ export default function GroupChatPage() {
     const [loading, setLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
+    const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob, duration: number, url: string } | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
 
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
-    const recordingStartTimeRef = useRef<number | null>(null);
-
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const params = useParams();
     const groupId = params.groupId as string;
@@ -103,16 +105,27 @@ export default function GroupChatPage() {
         return () => unsubscribeMessages();
 
     }, [user, groupId, db, router, toast]);
+    
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (audio) {
+            const onEnded = () => setIsPlaying(false);
+            audio.addEventListener('ended', onEnded);
+            return () => {
+                audio.removeEventListener('ended', onEnded);
+            }
+        }
+    }, [recordedAudio]);
 
-    const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
-        if (!audioBlob || !user || !groupId) return;
+    const sendVoiceNote = async () => {
+        if (!recordedAudio || !user || !groupId) return;
     
         try {
             const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
+            reader.readAsDataURL(recordedAudio.blob);
             reader.onloadend = async () => {
                 const base64data = reader.result as string;
-                if (base64data.length > 1048576) {
+                if (base64data.length > 1048576) { // 1MB limit
                      toast({ title: "File Terlalu Besar", description: "Pesan suara terlalu besar untuk dikirim.", variant: "destructive"});
                      return;
                 }
@@ -127,7 +140,7 @@ export default function GroupChatPage() {
                     senderAvatar: userData?.avatarUrl || '',
                     audioUrl: base64data,
                     createdAt: serverTimestamp(),
-                    duration: Math.round(duration)
+                    duration: Math.round(recordedAudio.duration)
                 });
     
                 const groupDocRef = doc(db, 'groups', groupId);
@@ -137,6 +150,7 @@ export default function GroupChatPage() {
                 });
     
                 toast({ title: "Pesan Suara Terkirim" });
+                resetRecording();
             };
         } catch (error) {
             console.error("Error sending voice note:", error);
@@ -148,9 +162,12 @@ export default function GroupChatPage() {
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            if (recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+            }
         }
     };
-
 
     const startRecording = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -160,9 +177,7 @@ export default function GroupChatPage() {
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = {
-                mimeType: 'audio/ogg; codecs=opus',
-            };
+            const options = { mimeType: 'audio/ogg; codecs=opus' };
             const workerOptions = {
                 OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
                 WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
@@ -172,18 +187,13 @@ export default function GroupChatPage() {
             audioChunksRef.current = [];
             
             mediaRecorderRef.current.onstart = () => {
-                setIsRecording(true);
-                recordingStartTimeRef.current = Date.now();
-                
-                if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-    
+                const startTime = Date.now();
+                setRecordingDuration(0);
                 recordingIntervalRef.current = setInterval(() => {
-                    if(recordingStartTimeRef.current){
-                        const newDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
-                        setRecordingDuration(newDuration);
-                        if (newDuration >= 30) {
-                            stopRecording();
-                        }
+                    const newDuration = (Date.now() - startTime) / 1000;
+                    setRecordingDuration(newDuration);
+                    if (newDuration >= 30) {
+                        stopRecording();
                     }
                 }, 100);
             };
@@ -196,39 +206,53 @@ export default function GroupChatPage() {
                 const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
                 const finalDuration = recordingDuration;
                 
-                // Reset state
-                setIsRecording(false);
-                if(recordingIntervalRef.current) {
-                    clearInterval(recordingIntervalRef.current);
-                    recordingIntervalRef.current = null;
-                }
-                setRecordingDuration(0);
-                recordingStartTimeRef.current = null;
                 stream.getTracks().forEach(track => track.stop());
 
-                // Send the note
-                if(blob.size > 0 && finalDuration > 0.5) { // Ensure not an empty recording
-                    sendVoiceNote(blob, finalDuration);
+                if (blob.size > 0 && finalDuration > 0.5) {
+                    const audioUrl = URL.createObjectURL(blob);
+                    setRecordedAudio({ blob, duration: finalDuration, url: audioUrl });
                 }
+                
                 audioChunksRef.current = [];
+                setRecordingDuration(0);
             };
 
             mediaRecorderRef.current.start();
+            setIsRecording(true);
         } catch (err) {
             console.error("Error starting recording:", err);
             toast({ title: 'Gagal Memulai Rekaman', description: 'Pastikan Anda telah memberikan izin mikrofon.', variant: 'destructive' });
         }
     };
 
-
-    const handleMicPress = () => {
-        startRecording();
+    const handleRecordClick = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            resetRecording();
+            startRecording();
+        }
     };
 
-    const handleMicRelease = () => {
-        stopRecording();
+    const resetRecording = () => {
+        setRecordedAudio(null);
+        setIsRecording(false);
+        setRecordingDuration(0);
+        if (recordingIntervalRef.current) {
+            clearInterval(recordingIntervalRef.current);
+        }
     };
-
+    
+    const togglePlayback = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
 
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -283,31 +307,36 @@ export default function GroupChatPage() {
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                <div className={`${neumorphicInsetStyle} flex items-center justify-center p-2 rounded-full h-20`}>
-                    {isRecording ? (
-                         <>
-                            <div className="flex-1 text-center font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</div>
-                            <Button 
-                                size="icon" 
-                                variant="destructive" 
-                                className="rounded-full w-14 h-14 bg-red-500 text-white shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" 
-                                onClick={handleMicRelease}
-                            >
+                <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-2`}>
+                    {recordedAudio ? (
+                        <>
+                            <Button size="icon" variant="ghost" onClick={resetRecording} className="w-14 h-14 rounded-full">
+                                <Trash2 />
+                            </Button>
+                            <div className="flex-1 flex items-center justify-center gap-2">
+                                 <Button size="icon" variant="ghost" onClick={togglePlayback} className="rounded-full">
+                                    {isPlaying ? <Pause/> : <Play />}
+                                </Button>
+                                <span className="font-mono text-lg">{formatTime(recordedAudio.duration)}</span>
+                                <audio ref={audioRef} src={recordedAudio.url} className="hidden" />
+                            </div>
+                            <Button size="icon" variant="default" onClick={sendVoiceNote} className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]">
+                                <Send />
+                            </Button>
+                        </>
+                    ) : isRecording ? (
+                        <>
+                             <div className="w-14 h-14"></div>
+                             <div className="flex-1 text-center font-mono text-lg text-primary animate-pulse">{formatTime(recordingDuration)} / 0:30</div>
+                             <Button size="icon" variant="destructive" className="w-14 h-14 rounded-full bg-red-500 text-white shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626]" onClick={handleRecordClick}>
                                 <Square />
                             </Button>
                         </>
                     ) : (
-                        <>
-                            <div className="flex-1 text-center text-muted-foreground">Tahan untuk merekam</div>
-                            <Button 
-                                size="icon" 
-                                variant="default" 
-                                className="rounded-full w-14 h-14 bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" 
-                                onMouseDown={handleMicPress} 
-                                onMouseUp={handleMicRelease} 
-                                onTouchStart={(e) => {e.preventDefault(); handleMicPress();}} 
-                                onTouchEnd={(e) => {e.preventDefault(); handleMicRelease();}}
-                            >
+                         <>
+                            <div className="w-14 h-14"></div>
+                            <div className="flex-1 text-center text-muted-foreground">Tekan untuk merekam</div>
+                            <Button size="icon" variant="default" className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626]" onClick={handleRecordClick}>
                                 <Mic />
                             </Button>
                         </>
@@ -316,5 +345,6 @@ export default function GroupChatPage() {
             </footer>
         </div>
     );
+}
 
     
