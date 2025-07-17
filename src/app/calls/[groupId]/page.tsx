@@ -4,16 +4,27 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, UserPlus, Square, Play, Pause } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2 } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type Message = {
     id: string;
@@ -115,10 +126,22 @@ export default function GroupChatPage() {
         ...id,
         formatDistance: (token, count, options) => {
             if (token === 'lessThanXMinutes') {
-                if (count === 1) return 'baru saja';
+                 if (options?.addSuffix) {
+                    return count === 1 ? 'baru saja' : `${count} menit yang lalu`;
+                 }
+                 return count === 1 ? 'baru saja' : `${count} menit`;
             }
+             if (token === 'xMinutes') {
+                if (options?.addSuffix) {
+                    return `${count} menit yang lalu`;
+                }
+                return `${count} menit`;
+             }
              if (token === 'lessThanXSeconds') {
-                if (count === 1) return 'baru saja';
+                if (options?.addSuffix) {
+                    return 'baru saja';
+                }
+                return 'baru saja';
             }
             return id.formatDistance!(token, count, options);
         },
@@ -195,6 +218,25 @@ export default function GroupChatPage() {
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!groupId) return;
+        try {
+            await deleteDoc(doc(db, 'groups', groupId, 'messages', messageId));
+            toast({
+                title: "Pesan Dihapus",
+                description: "Pesan suara telah berhasil dihapus.",
+            });
+        } catch (error) {
+            console.error("Error deleting message:", error);
+            toast({
+                title: "Gagal Menghapus",
+                description: "Terjadi kesalahan saat menghapus pesan.",
+                variant: "destructive",
+            });
+        }
+    };
+
+
     const sendVoiceNote = async (audioBlob: Blob, duration: number) => {
         if (!user || !groupId || duration < 0.5) return;
     
@@ -224,7 +266,7 @@ export default function GroupChatPage() {
             });
 
             await updateDoc(doc(db, 'groups', groupId), {
-                lastMessage: `Pesan suara (${formatTime(duration)})`,
+                lastMessage: `Pesan suara (${formatTime(Math.round(duration))})`,
                 lastMessageTime: formatDistanceToNow(new Date(), { addSuffix: false, locale: customLocale })
             });
             
@@ -336,30 +378,57 @@ const startRecording = async () => {
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map(msg => (
-                    <div key={msg.id} className={`flex items-end gap-2 ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}>
-                       {msg.senderId !== user?.uid && (
-                           <Avatar className="h-8 w-8">
-                               <AvatarImage src={msg.senderAvatar} />
-                               <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
-                           </Avatar>
-                       )}
-                       <div className={`flex flex-col max-w-[75%] ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}>
-                            {msg.senderId !== user?.uid && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
-                            <Card className={`p-2 rounded-xl ${msg.senderId === user?.uid ? 'bg-primary/20' : 'bg-muted'}`}>
-                                <AudioPlayer src={msg.audioUrl} />
-                            </Card>
-                            <div className="flex items-center gap-2 mt-1 px-2">
-                                <p className="text-xs text-muted-foreground">
-                                    {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {formatTime(msg.duration || 0)}
-                                </p>
-                            </div>
-                       </div>
-                    </div>
-                ))}
+                {messages.map(msg => {
+                    const isSender = msg.senderId === user?.uid;
+                    const messageDate = msg.createdAt?.toDate();
+                    const isDeletable = messageDate && (new Date().getTime() - messageDate.getTime()) < 5 * 60 * 1000;
+
+                    return (
+                        <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                           {isSender && isDeletable && (
+                               <AlertDialog>
+                                   <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                   </AlertDialogTrigger>
+                                   <AlertDialogContent>
+                                       <AlertDialogHeader>
+                                           <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                                           <AlertDialogDescription>
+                                               Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
+                                           </AlertDialogDescription>
+                                       </AlertDialogHeader>
+                                       <AlertDialogFooter>
+                                           <AlertDialogCancel>Batal</AlertDialogCancel>
+                                           <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Hapus</AlertDialogAction>
+                                       </AlertDialogFooter>
+                                   </AlertDialogContent>
+                               </AlertDialog>
+                           )}
+                           {!isSender && (
+                               <Avatar className="h-8 w-8">
+                                   <AvatarImage src={msg.senderAvatar} />
+                                   <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
+                               </Avatar>
+                           )}
+                           <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
+                                {!isSender && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
+                                <Card className={`p-2 rounded-xl ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
+                                    <AudioPlayer src={msg.audioUrl} />
+                                </Card>
+                                <div className="flex items-center gap-2 mt-1 px-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatTime(msg.duration || 0)}
+                                    </p>
+                                </div>
+                           </div>
+                        </div>
+                    )
+                })}
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
