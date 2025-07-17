@@ -292,12 +292,12 @@ export default function GroupChatPage() {
             </main>
 
             <footer className="p-4 border-t border-border bg-background sticky bottom-0">
-                 <div className={`${neumorphicInsetStyle} flex items-center justify-center p-2 rounded-full h-20 gap-4`}>
+                 <div className={`${neumorphicInsetStyle} flex items-center justify-between p-2 rounded-full h-20 gap-4`}>
                     
                     {isRecording ? (
                         // Recording state
                         <>
-                            <div className="flex items-center gap-2 min-w-[100px] justify-center">
+                            <div className="flex items-center gap-2 min-w-[100px] justify-center ml-4">
                                 <div className="h-2 w-2 rounded-full bg-destructive animate-pulse"></div>
                                 <span className="font-mono text-lg text-foreground">{formatTime(recordingDuration)}</span>
                             </div>
@@ -330,8 +330,9 @@ export default function GroupChatPage() {
                             </Button>
                         </>
                     ) : (
-                        // Initial state
+                        // Initial state - Mic button on the right
                         <>
+                            <div className="flex-1"></div>
                             <Button 
                                 size="icon" 
                                 className="w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-[4px_4px_8px_#0d0d0d,-4px_-4px_8px_#262626] active:shadow-[inset_4px_4px_8px_#0d0d0d,inset_-4px_-4px_8px_#262626] flex-shrink-0"
