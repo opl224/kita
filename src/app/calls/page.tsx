@@ -269,14 +269,14 @@ export default function VoiceNoteGroupsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center -space-x-2">
-                    {group.members && group.members.length > 0 ? group.members.slice(0, 5).map((member: any, index: number) => (
-                      <Avatar key={member?.uid || index} className="h-10 w-10 border-2 border-background">
+                    {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
+                      <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
                         <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
                         <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
-                    )) : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">?</div>}
+                    ))}
                      {group.members && group.members.length > 5 && (
-                        <Avatar className="h-10 w-10 border-2 border-background">
+                        <Avatar className="h-10 w-10 border-2 border-background bg-muted">
                             <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
                         </Avatar>
                     )}
