@@ -83,12 +83,12 @@ export default function VoiceNoteGroupsPage() {
   }, [auth]);
 
   useEffect(() => {
-    setLoading(true);
     if (!user) {
-        setGroups([]); // Clear groups if user logs out
+        setGroups([]);
         setLoading(false);
         return;
-    }; 
+    }
+    setLoading(true);
 
     const groupsCollection = collection(db, 'groups');
     const q = query(groupsCollection, orderBy('lastMessageTime', 'desc'));
@@ -362,3 +362,5 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
+
+    
