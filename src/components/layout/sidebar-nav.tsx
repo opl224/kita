@@ -35,12 +35,6 @@ export function SidebarNav() {
                         isActive && 'text-primary'
                       )}>
                       <item.icon className={cn("h-6 w-6 transition-transform", isActive ? 'scale-110' : '')} />
-                      <span className={cn(
-                        "text-xs font-medium transition-opacity",
-                        isActive ? 'opacity-100' : 'opacity-0'
-                      )}>
-                        {item.label}
-                      </span>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="top" className={cn(isActive && 'hidden')}>
