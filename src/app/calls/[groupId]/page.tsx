@@ -9,9 +9,8 @@ import { app } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mic, Send, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Mic, Send, Trash2, UserPlus } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -265,9 +264,9 @@ export default function GroupChatPage() {
                                <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
                            </Avatar>
                        )}
-                       <div className={`max-w-[75%] ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}>
+                       <div className={`flex flex-col max-w-[75%] ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}>
                             {msg.senderId !== user?.uid && <p className="text-xs text-muted-foreground ml-3 mb-1">{msg.senderName}</p>}
-                            <Card className={neumorphicCardStyle}>
+                            <Card className={`p-2 rounded-xl ${msg.senderId === user?.uid ? 'bg-primary/20' : 'bg-muted'}`}>
                                 <audio controls src={msg.audioUrl} className="w-full h-10" />
                             </Card>
                             <p className="text-xs text-muted-foreground mt-1 px-2">
