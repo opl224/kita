@@ -108,17 +108,19 @@ export default function NotificationsPage() {
 
     try {
         if (accept) {
-            // HANYA perbarui status undangan. Klien tidak memiliki izin untuk mengubah grup.
-            // Ini akan menyelesaikan masalah perizinan.
-            // Di aplikasi produksi, ini akan memicu Cloud Function untuk menambahkan pengguna ke grup.
-            await updateDoc(invitationRef, {
-                status: 'accepted'
-            });
+            // Update the group document to add the new member
             await updateDoc(groupRef, {
                 members: arrayUnion(user.uid)
             });
+
+            // After successfully adding to group, update the invitation status
+            await updateDoc(invitationRef, {
+                status: 'accepted'
+            });
+
             toast({ title: "Berhasil!", description: `Anda telah bergabung dengan grup ${invitation.groupName}.` });
         } else {
+            // Just update the invitation status to rejected
             await updateDoc(invitationRef, {
                 status: 'rejected'
             });
@@ -126,7 +128,7 @@ export default function NotificationsPage() {
         }
     } catch (error) {
         console.error("Error handling invitation:", error);
-        toast({ title: "Gagal", description: "Terjadi kesalahan saat memproses undangan.", variant: "destructive" });
+        toast({ title: "Gagal", description: "Terjadi kesalahan saat memproses undangan. Pastikan aturan keamanan Anda benar.", variant: "destructive" });
     } finally {
         setProcessingInvite(null);
     }
