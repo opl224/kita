@@ -18,8 +18,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
-import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -44,7 +42,6 @@ export default function Home() {
   const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const { theme, setTheme } = useTheme();
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -162,16 +159,6 @@ export default function Home() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
-            >
-              <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
             <Dialog>
               <DialogTrigger asChild>
                 <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none rounded-full">

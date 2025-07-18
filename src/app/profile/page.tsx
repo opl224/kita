@@ -321,8 +321,7 @@ export default function ProfilePage() {
         </Card>
 
         <Button type="button" variant="destructive" onClick={handleLogout} className={`${neumorphicButtonStyle} w-full`}>
-            <LogOut className="mr-2 h-5 w-5" />
-            Keluar
+          Keluar
         </Button>
       </div>
 
