@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2 } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, where, getDocs, documentId } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Post = {
   id: string;
@@ -35,6 +36,12 @@ type Post = {
   createdAt: any;
   likes: string[];
 };
+
+type Liker = {
+    id: string;
+    displayName: string;
+    avatarUrl: string;
+}
 
 const editCaptionSchema = z.object({
   caption: z.string().max(500, "Keterangan tidak boleh lebih dari 500 karakter."),
@@ -214,6 +221,11 @@ export default function PostPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
 
+  const [viewingLikersOfPost, setViewingLikersOfPost] = useState<Post | null>(null);
+  const [likers, setLikers] = useState<Liker[]>([]);
+  const [loadingLikers, setLoadingLikers] = useState(false);
+
+
   const db = getFirestore(app);
   const auth = getAuth(app);
   
@@ -255,6 +267,45 @@ export default function PostPage() {
 
     return () => unsubscribe();
   }, [db]);
+  
+  // Effect to fetch likers when a post is selected for viewing likers
+  useEffect(() => {
+    const fetchLikers = async () => {
+        if (!viewingLikersOfPost || viewingLikersOfPost.likes.length === 0) {
+            setLikers([]);
+            return;
+        }
+
+        setLoadingLikers(true);
+        try {
+            const likerIds = viewingLikersOfPost.likes;
+            const usersRef = collection(db, 'users');
+            // Firestore 'in' query is limited to 30 elements. Chunk if necessary.
+            const likerChunks: string[][] = [];
+            for (let i = 0; i < likerIds.length; i += 30) {
+              likerChunks.push(likerIds.slice(i, i + 30));
+            }
+            
+            const likersData: Liker[] = [];
+            for (const chunk of likerChunks) {
+                const q = query(usersRef, where(documentId(), 'in', chunk));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(doc => {
+                    likersData.push({ id: doc.id, ...doc.data() } as Liker);
+                });
+            }
+            setLikers(likersData);
+
+        } catch (error) {
+            console.error("Error fetching likers:", error);
+            setLikers([]);
+        } finally {
+            setLoadingLikers(false);
+        }
+    };
+    
+    fetchLikers();
+  }, [viewingLikersOfPost, db]);
   
   const handleLike = async (postId: string) => {
       if (!user) return;
@@ -317,6 +368,7 @@ export default function PostPage() {
           posts.map(post => {
             const isLiked = user && post.likes ? post.likes.includes(user.uid) : false;
             const isOwner = user && user.uid === post.userId;
+            const likeCount = (post.likes || []).length;
             return (
                 <Card key={post.id} className={neumorphicCardStyle}>
                   <CardHeader className="flex flex-row items-center gap-3 p-4">
@@ -367,7 +419,7 @@ export default function PostPage() {
                         />
                     </div>
                   </CardContent>
-                  <CardFooter className="p-4">
+                  <CardFooter className="p-4 flex justify-between items-center">
                       <div className="flex items-center gap-2">
                           <Button
                               variant="ghost"
@@ -381,9 +433,14 @@ export default function PostPage() {
                               <Heart className={cn("h-6 w-6", isLiked && "fill-current")} />
                           </Button>
                           <span className="text-sm font-medium text-muted-foreground">
-                              {(post.likes || []).length} suka
+                              {likeCount} suka
                           </span>
                       </div>
+                      {likeCount > 0 && (
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setViewingLikersOfPost(post)}>
+                            <Eye className="h-6 w-6" />
+                        </Button>
+                      )}
                   </CardFooter>
                 </Card>
             )
@@ -435,6 +492,34 @@ export default function PostPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
        </AlertDialog>
+
+        {/* View Likers Dialog */}
+        <Dialog open={!!viewingLikersOfPost} onOpenChange={(isOpen) => { if (!isOpen) setViewingLikersOfPost(null); }}>
+            <DialogContent className="max-w-[90vw] sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Disukai oleh</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="h-72">
+                    <div className="space-y-2 pr-4">
+                        {loadingLikers ? (
+                            <CustomLoader />
+                        ) : likers.length > 0 ? (
+                            likers.map(liker => (
+                                <div key={liker.id} className="flex items-center gap-3 p-2 rounded-lg">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={liker.avatarUrl} />
+                                        <AvatarFallback>{liker.displayName.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <p className="font-semibold">{liker.displayName}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-muted-foreground py-8">Belum ada yang menyukai postingan ini.</p>
+                        )}
+                    </div>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
