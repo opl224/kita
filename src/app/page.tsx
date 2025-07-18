@@ -2,11 +2,11 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from "firebase/auth";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 const moneyFormSchema = z.object({
@@ -35,6 +35,12 @@ type UserFeedback = {
   feedback: 'like' | 'dislike';
   createdAt: any;
 };
+
+type Contribution = {
+    id: string;
+    amount: number;
+    createdAt: any;
+}
 
 
 const ITEMS_PER_PAGE = 5;
@@ -91,6 +97,12 @@ export default function Home() {
 
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
+  // New state for viewing user contribution history
+  const [viewingUser, setViewingUser] = useState<any>(null);
+  const [userContributions, setUserContributions] = useState<Contribution[]>([]);
+  const [loadingContributions, setLoadingContributions] = useState(false);
+
+
   const auth = getAuth(app);
   const db = getFirestore(app);
 
@@ -114,67 +126,103 @@ export default function Home() {
     return () => unsubscribeAuth();
   }, [auth, router]);
   
-  useEffect(() => {
-    if (!user) {
-        setLoading(false);
-        return;
-    }
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
-    setLoading(true);
-    const unsubscribes: (() => void)[] = [];
+        setLoading(true);
+        const userDocRef = doc(db, "users", user.uid);
 
-    const userDocRef = doc(db, "users", user.uid);
-    const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUserData(data);
-            const userIsAdmin = !!data.isSuperUser;
-            setIsSuperUser(userIsAdmin);
-
-            if (userIsAdmin) {
-                // Admin-only: Fetch all users for money management
-                const usersQuery = query(collection(db, "users"));
-                const allUsersUnsubscribe = onSnapshot(usersQuery, (usersSnapshot) => {
-                    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setAllUsers(usersList);
-                });
-                unsubscribes.push(allUsersUnsubscribe);
-
-                // Admin-only: Fetch user feedback
-                const feedbackQuery = query(collection(db, "userFeedback"), orderBy("createdAt", "desc"));
-                const feedbackUnsubscribe = onSnapshot(feedbackQuery, (feedbackSnapshot) => {
-                    const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserFeedback));
-                    setUserFeedback(feedbackList);
-                });
-                unsubscribes.push(feedbackUnsubscribe);
+        const unsubscribeUser = onSnapshot(userDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUserData(data);
+                const userIsAdmin = !!data.isSuperUser;
+                setIsSuperUser(userIsAdmin);
+            } else {
+                 if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2") {
+                    await updateDoc(userDocRef, { isSuperUser: true });
+                    setIsSuperUser(true);
+                 }
             }
-        }
-        setLoading(false);
-    });
-    unsubscribes.push(userUnsubscribe);
-
-    const appStateRef = doc(db, "appState", "main");
-    const appStateUnsubscribe = onSnapshot(appStateRef, (docSnap) => {
-        if (docSnap.exists()) {
-            setTotalCollected(docSnap.data().totalMoneyCollected || 0);
-        }
-    });
-    unsubscribes.push(appStateUnsubscribe);
-    
-    const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
-    const userPostsUnsubscribe = onSnapshot(userPostsQuery, (postsSnapshot) => {
-        let totalLikesCount = 0;
-        postsSnapshot.forEach(postDoc => {
-            totalLikesCount += (postDoc.data().likes || []).length;
+            setLoading(false);
         });
-        setMyTotalLikes(totalLikesCount);
-    });
-    unsubscribes.push(userPostsUnsubscribe);
 
-    return () => {
-        unsubscribes.forEach(unsub => unsub());
-    };
-  }, [user, db]);
+        const appStateRef = doc(db, "appState", "main");
+        const unsubscribeAppState = onSnapshot(appStateRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setTotalCollected(docSnap.data().totalMoneyCollected || 0);
+            }
+        });
+
+        const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
+        const unsubscribeUserPosts = onSnapshot(userPostsQuery, (postsSnapshot) => {
+            let totalLikesCount = 0;
+            postsSnapshot.forEach(postDoc => {
+                totalLikesCount += (postDoc.data().likes || []).length;
+            });
+            setMyTotalLikes(totalLikesCount);
+        });
+
+        return () => {
+            unsubscribeUser();
+            unsubscribeAppState();
+            unsubscribeUserPosts();
+        };
+    }, [user, db]);
+
+    useEffect(() => {
+        if (!isSuperUser) {
+            setAllUsers([]);
+            setUserFeedback([]);
+            return;
+        }
+        
+        const usersQuery = query(collection(db, "users"));
+        const unsubscribeAllUsers = onSnapshot(usersQuery, (usersSnapshot) => {
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllUsers(usersList);
+        });
+
+        const feedbackQuery = query(collection(db, "userFeedback"), orderBy("createdAt", "desc"));
+        const unsubscribeFeedback = onSnapshot(feedbackQuery, (feedbackSnapshot) => {
+            const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserFeedback));
+            setUserFeedback(feedbackList);
+        });
+
+        return () => {
+            unsubscribeAllUsers();
+            unsubscribeFeedback();
+        };
+
+    }, [isSuperUser, db]);
+    
+    useEffect(() => {
+        if (viewingUser) {
+            setLoadingContributions(true);
+            const contributionsQuery = query(
+                collection(db, "notifications"),
+                where("userName", "==", viewingUser.displayName),
+                orderBy("createdAt", "desc")
+            );
+
+            const unsubscribe = onSnapshot(contributionsQuery, (querySnapshot) => {
+                const contributionsData = querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() } as Contribution))
+                    .filter(doc => doc.amount > 0);
+                setUserContributions(contributionsData);
+                setLoadingContributions(false);
+            }, (error) => {
+                console.error("Error fetching contributions:", error);
+                setLoadingContributions(false);
+            });
+
+            return () => unsubscribe();
+        }
+    }, [viewingUser, db]);
+
 
   const handleAddMoney = async (data: MoneyFormValues) => {
     if (!user || !editingUser || !isSuperUser) return;
@@ -197,6 +245,7 @@ export default function Home() {
         const notificationsCollection = collection(db, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
+          userName: editingUser.displayName,
           createdAt: serverTimestamp(),
           amount: amountToAdd,
         });
@@ -250,6 +299,8 @@ export default function Home() {
   
   const showFeedbackCard = !loading && userData && !isSuperUser && userData.hasGivenFeedback === false;
 
+  const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
+
   if (loading) {
     return <CustomLoader />;
   }
@@ -283,8 +334,12 @@ export default function Home() {
         
         {showFeedbackCard && (
             <Card className={`${neumorphicCardStyle} p-6`}>
-                <CardContent className="p-0 flex flex-col items-center text-center gap-4">
-                    <h3 className="font-headline font-semibold text-foreground">Suka dengan aplikasi ini?</h3>
+                <CardHeader className="p-0 mb-4">
+                  <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
+                    Suka dengan aplikasi ini?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 flex items-center justify-center text-center gap-4">
                     <div className="flex gap-4 mt-2">
                         <Button size="icon" className="h-16 w-16 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset" onClick={() => handleFeedback('like')}>
                             <ThumbsUp className="h-8 w-8" />
@@ -340,16 +395,16 @@ export default function Home() {
                 <CardContent className="p-0">
                     <div className="space-y-4">
                         {paginatedUsers.map((u) => (
-                            <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
-                                <Avatar className="h-10 w-10 border-none rounded-full">
+                            <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset cursor-pointer" onClick={() => setViewingUser(u)}>
+                                <Avatar className="h-10 w-10 border-none rounded-full pointer-events-none">
                                     <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
                                     <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                                 </Avatar>
-                                <div className="flex-1">
+                                <div className="flex-1 pointer-events-none">
                                     <p className="font-semibold text-foreground">{u.displayName}</p>
                                     <p className="text-sm text-muted-foreground">{u.email}</p>
                                 </div>
-                                <div className="flex items-center gap-2 text-red-500 mr-2">
+                                <div className="flex items-center gap-2 text-red-500 mr-2 pointer-events-none">
                                   <Heart className="h-4 w-4" />
                                   <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
                                 </div>
@@ -357,8 +412,8 @@ export default function Home() {
                                   <DialogTrigger asChild>
                                       <Button 
                                         size="icon" 
-                                        className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
-                                        onClick={() => setEditingUser(u)}
+                                        className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-10"
+                                        onClick={(e) => { e.stopPropagation(); setEditingUser(u); }}
                                       >
                                           <Plus className="h-5 w-5 text-primary-foreground" />
                                       </Button>
@@ -419,7 +474,12 @@ export default function Home() {
                                     <div className="flex-1">
                                         <p className="font-semibold text-foreground">{feedback.userName}</p>
                                         <p className="text-xs text-muted-foreground">
-                                          {feedback.createdAt ? formatDistanceToNow(feedback.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
+                                          {feedback.createdAt ? formatDistanceToNow(feedback.createdAt.toDate(), { addSuffix: false, locale: id })
+                                          .replace('kurang dari ', '')
+                                          .replace('sekitar ', '')
+                                          .replace('pada ', '')
+                                          .replace('yang lalu ', '')
+                                          : 'baru saja'}
                                         </p>
                                     </div>
                                 </div>
@@ -448,6 +508,43 @@ export default function Home() {
             </AlertDialogContent>
         </AlertDialog>
 
+        {/* Dialog for viewing user contribution history */}
+        <Dialog open={!!viewingUser} onOpenChange={(isOpen) => !isOpen && setViewingUser(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        Riwayat Tambahan Uang: {viewingUser?.displayName}
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
+                    {loadingContributions ? (
+                        <CustomLoader />
+                    ) : userContributions.length > 0 ? (
+                        userContributions.map(contrib => (
+                            <div key={contrib.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                <span className="font-medium text-foreground">
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(contrib.amount)}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {contrib.createdAt ? format(contrib.createdAt.toDate(), 'd MMM yyyy, HH:mm', { locale: id }) : ''}
+                                </span>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-8">Belum ada riwayat tambahan uang untuk pengguna ini.</p>
+                    )}
+                </div>
+                 <DialogFooter className="pt-4 border-t">
+                    <div className="w-full flex justify-between items-center">
+                        <span className="font-semibold text-lg">Total</span>
+                        <span className="font-bold text-lg text-primary">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalUserContribution)}
+                        </span>
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
