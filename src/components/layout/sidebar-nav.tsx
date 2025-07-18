@@ -7,14 +7,14 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, orderBy } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 export const menuItems = [
   { href: '/', label: 'Beranda', icon: Home, notificationKey: '' },
-  { href: '/calls', label: 'Panggilan', icon: Phone, notificationKey: '' },
+  { href: '/calls', label: 'Panggilan', icon: Phone, notificationKey: 'calls' },
   { href: '/notifications', label: 'Notifikasi', icon: Bell, notificationKey: 'notifications' },
   { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
@@ -22,7 +22,7 @@ export const menuItems = [
 export function SidebarNav() {
   const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [totalUnseenCount, setTotalUnseenCount] = useState(0);
+  const [notificationCounts, setNotificationCounts] = useState({ notifications: 0, calls: 0 });
   const db = getFirestore(app);
   const auth = getAuth(app);
 
@@ -30,7 +30,7 @@ export function SidebarNav() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
-        setTotalUnseenCount(0);
+        setNotificationCounts({ notifications: 0, calls: 0 });
       }
     });
     return () => unsubscribeAuth();
@@ -41,34 +41,44 @@ export function SidebarNav() {
       return;
     }
 
-    const setupNotificationListener = async () => {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userDocRef); // Use getDoc instead of onSnapshot for a one-time read
-        if (!userSnap.exists()) return;
+    const setupListeners = async () => {
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) return;
+            const userData = userDocSnap.data();
 
-        const invitationsQuery = query(
-          collection(db, 'invitations'),
-          where('userId', '==', user.uid),
-          where('status', '==', 'pending')
-        );
+            // Listener for new group invitations
+            const invitationsQuery = query(
+              collection(db, 'invitations'),
+              where('userId', '==', user.uid),
+              where('status', '==', 'pending')
+            );
+            const unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
+              setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
+            });
 
-        const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
-          setTotalUnseenCount(snapshot.size); // Only count pending invitations for now
-        }, (error) => {
-            console.error("Error in invitations snapshot listener:", error);
-            // Optionally, handle the error state in the UI
-        });
+            // Listener for new group messages
+            const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
+            const groupsQuery = query(
+              collection(db, 'groups'),
+              where('members', 'array-contains', user.uid),
+              where('lastMessageTime', '>', lastSeenCalls)
+            );
+            const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
+               setNotificationCounts(prev => ({ ...prev, calls: snapshot.size }));
+            });
 
-        return () => {
-          unsubscribeInvitations();
-        };
-      } catch (error) {
-        console.error("Error setting up notification listener:", error);
-      }
+            return () => {
+              unsubscribeInvites();
+              unsubscribeGroups();
+            };
+        } catch (error) {
+            console.error("Error setting up notification listeners:", error);
+        }
     };
 
-    const unsubscribePromise = setupNotificationListener();
+    const unsubscribePromise = setupListeners();
 
     return () => {
       unsubscribePromise?.then(unsub => unsub && unsub());
@@ -85,8 +95,8 @@ export function SidebarNav() {
         <div className="flex justify-around items-center h-20 px-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
-            const isNotificationItem = item.notificationKey === 'notifications';
-            const hasNotification = isNotificationItem && totalUnseenCount > 0 && pathname !== '/notifications';
+            const notificationKey = item.notificationKey as keyof typeof notificationCounts;
+            const hasNotification = notificationKey && notificationCounts[notificationKey] > 0 && pathname !== item.href;
 
             return (
               <Tooltip key={item.href}>

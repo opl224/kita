@@ -66,6 +66,7 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`,
         lastSeenNotifications: new Date(0),
+        lastSeenCalls: new Date(0),
         hasGivenFeedback: false,
       });
 

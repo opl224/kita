@@ -125,8 +125,16 @@ export default function VoiceNoteGroupsPage() {
         }
         return;
     }
-    
+
     setLoading(true);
+
+    // Mark all group messages as "seen" by updating the timestamp
+    const userDocRef = doc(db, "users", user.uid);
+    updateDoc(userDocRef, {
+      lastSeenCalls: serverTimestamp()
+    }).catch(err => console.error("Error updating last seen calls timestamp:", err));
+
+
     const groupsCollection = collection(db, 'groups');
     const q = query(
       groupsCollection, 
