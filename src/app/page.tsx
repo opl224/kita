@@ -291,11 +291,11 @@ export default function Home() {
   }
 
   if (!user || !userData) {
-    return null; // AppShell will handle the loader
+    return null;
   }
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in-50">
+    <div className="flex flex-col gap-8">
       <header className="flex justify-between items-center relative">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
@@ -544,7 +544,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
-
-    

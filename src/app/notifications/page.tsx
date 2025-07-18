@@ -31,6 +31,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [processingInvite, setProcessingInvite] = useState<string | null>(null);
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -50,6 +51,8 @@ export default function NotificationsPage() {
         return;
     }
 
+    setLoading(true);
+
     // Mark all notifications as seen when the user visits this page
     const userDocRef = doc(db, "users", user.uid);
     updateDoc(userDocRef, {
@@ -64,8 +67,10 @@ export default function NotificationsPage() {
         fetchedNotifications.push({ id: doc.id, ...doc.data() } as Notification);
       });
       setNotifications(fetchedNotifications);
+      setLoading(false); // Set loading to false after first fetch
     }, (error) => {
         console.error("Error fetching notifications:", error);
+        setLoading(false);
     });
 
     // Fetch pending invitations for the current user
@@ -124,12 +129,12 @@ export default function NotificationsPage() {
   };
 
 
-  if (!user) {
-    return null; // AppShell will handle the loader
+  if (loading) {
+    return <CustomLoader />;
   }
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in-50">
+    <div className="flex flex-col gap-8">
       <header className="flex justify-between items-center">
         <div>
             <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
