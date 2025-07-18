@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Plus } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -41,7 +40,6 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const db = getFirestore(app);
-  const storage = getStorage(app);
   
   useDialogBackButton(open, onOpenChange);
 
@@ -76,13 +74,7 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
     setIsSubmitting(true);
 
     try {
-      // 1. Upload image to Firebase Storage
-      const imageFileName = `${user.uid}-${Date.now()}.jpg`;
-      const imageStorageRef = storageRef(storage, `posts/${imageFileName}`);
-      const uploadTask = await uploadString(imageStorageRef, base64Image, 'data_url');
-      const downloadURL = await getDownloadURL(uploadTask.ref);
-
-      // 2. Get user data for post
+      // 1. Get user data for post
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
 
@@ -90,12 +82,12 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
           throw new Error("User data not found");
       }
 
-      // 3. Create post document in Firestore
+      // 2. Create post document in Firestore with Base64 image
       await addDoc(collection(db, 'posts'), {
         userId: user.uid,
         userName: userData.displayName,
         userAvatar: userData.avatarUrl,
-        imageUrl: downloadURL,
+        imageUrl: base64Image, // Store the Base64 string directly
         caption: caption,
         createdAt: serverTimestamp(),
       });
@@ -289,5 +281,3 @@ export default function PostPage() {
     </div>
   );
 }
-
-    

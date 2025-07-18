@@ -7,7 +7,6 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { getAuth, signOut, onAuthStateChanged, User, updatePassword } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import { app } from "@/lib/firebase";
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
