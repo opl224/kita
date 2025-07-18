@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -389,7 +389,7 @@ export default function Home() {
                 <CardContent className="p-0">
                     <div className="space-y-4">
                         {paginatedUsers.map((u) => (
-                            <div key={u.id} className="flex items-center gap-2 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                            <div key={u.id} className="flex items-center justify-between gap-2 p-3 rounded-lg bg-background shadow-neumorphic-inset">
                                 <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => setViewingUser(u)}>
                                     <Avatar className="h-10 w-10 border-none rounded-full pointer-events-none">
                                         <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
@@ -549,5 +549,7 @@ export default function Home() {
     </div>
   );
 }
+
+    
 
     
