@@ -11,6 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { CustomLoader } from "@/components/layout/loader";
 
 type Notification = {
   id: string;
@@ -150,7 +151,7 @@ export default function NotificationsPage() {
 
       <main className="space-y-6">
         {loading ? (
-            <div className="flex items-center justify-center pt-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            <CustomLoader />
         ) : notifications.length === 0 && invitations.length === 0 ? (
             <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                 <Bell className="h-16 w-16 text-muted-foreground mb-4" />

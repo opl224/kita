@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, LogOut, Loader, Moon, Sun } from "lucide-react";
+import { CustomLoader } from "@/components/layout/loader";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
@@ -168,7 +169,7 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen"><Loader className="h-12 w-12 animate-spin"/></div>
+    return <CustomLoader />;
   }
 
   return (
@@ -290,5 +291,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

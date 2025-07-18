@@ -21,6 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { CustomLoader } from "@/components/layout/loader";
 
 const groupFormSchema = z.object({
   name: z.string().min(3, "Nama grup minimal 3 karakter."),
@@ -219,7 +220,7 @@ export default function VoiceNoteGroupsPage() {
 
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+    return <CustomLoader />;
   }
 
   return (
