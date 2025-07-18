@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const loginFormSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -33,6 +34,7 @@ export default function LoginPage() {
   const router = useRouter();
   const auth = getAuth(app);
   const [showPassword, setShowPassword] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -49,6 +51,11 @@ export default function LoginPage() {
       router.push('/');
     } catch (error) {
       console.error("Login failed:", error);
+      toast({
+          variant: "destructive",
+          title: "Login Gagal",
+          description: "Email atau password salah. Silakan coba lagi.",
+      });
     }
   }
 

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 const signupFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
@@ -38,6 +39,7 @@ export default function SignupPage() {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const { toast } = useToast();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -69,8 +71,13 @@ export default function SignupPage() {
         lastSeenCalls: new Date(0),
         hasGivenFeedback: false,
       });
-
+      
+      toast({
+        title: "Pendaftaran Berhasil!",
+        description: "Akun Anda telah berhasil dibuat.",
+      });
       router.push('/');
+
     } catch (error: any) {
         console.error("Signup failed:", error);
     }

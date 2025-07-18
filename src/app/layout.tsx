@@ -1,8 +1,10 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
 import "./loader.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "Kita's",
@@ -29,6 +31,7 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <AppShell>{children}</AppShell>
+            <Toaster />
         </ThemeProvider>
       </body>
     </html>
