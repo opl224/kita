@@ -8,17 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, X, Plus, Heart } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { CustomLoader } from '@/components/layout/loader';
 import { useDialogBackButton } from '@/components/layout/app-shell';
 import { cn } from '@/lib/utils';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 type Post = {
   id: string;
@@ -30,6 +36,13 @@ type Post = {
   createdAt: any;
   likes: string[];
 };
+
+const editCaptionSchema = z.object({
+  caption: z.string().max(500, "Keterangan tidak boleh lebih dari 500 karakter."),
+});
+
+type EditCaptionFormValues = z.infer<typeof editCaptionSchema>;
+
 
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
 const neumorphicButtonStyle = "shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
@@ -57,12 +70,13 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-
       const reader = new FileReader();
+      reader.onload = (e) => {
+        const previewUrl = e.target?.result as string;
+        setImagePreview(previewUrl);
+        setBase64Image(previewUrl);
+      };
       reader.readAsDataURL(file);
-      reader.onloadend = () => setBase64Image(reader.result as string);
       reader.onerror = (error) => {
         toast({ variant: "destructive", title: "Gagal memproses gambar." });
       };
@@ -201,8 +215,26 @@ export default function PostPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [deletingPost, setDeletingPost] = useState<Post | null>(null);
+
+  const { toast } = useToast();
   const db = getFirestore(app);
   const auth = getAuth(app);
+  
+  const form = useForm<EditCaptionFormValues>({
+    resolver: zodResolver(editCaptionSchema),
+    defaultValues: { caption: "" },
+  });
+
+  useEffect(() => {
+    if (editingPost) {
+      form.setValue("caption", editingPost.caption);
+    } else {
+      form.reset({ caption: "" });
+    }
+  }, [editingPost, form]);
+
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, currentUser => {
@@ -237,16 +269,39 @@ export default function PostPage() {
       if (postDoc.exists()) {
           const postData = postDoc.data() as Post;
           if (postData.likes && postData.likes.includes(user.uid)) {
-              // Unlike
               await updateDoc(postRef, {
                   likes: arrayRemove(user.uid)
               });
           } else {
-              // Like
               await updateDoc(postRef, {
                   likes: arrayUnion(user.uid)
               });
           }
+      }
+  };
+  
+  const handleUpdateCaption = async (data: EditCaptionFormValues) => {
+      if (!editingPost) return;
+      const postRef = doc(db, 'posts', editingPost.id);
+      try {
+          await updateDoc(postRef, { caption: data.caption });
+          toast({ title: "Keterangan berhasil diperbarui." });
+          setEditingPost(null);
+      } catch (error) {
+          console.error("Error updating caption:", error);
+          toast({ variant: "destructive", title: "Gagal memperbarui keterangan." });
+      }
+  };
+
+  const handleDeletePost = async () => {
+      if (!deletingPost) return;
+      try {
+          await deleteDoc(doc(db, 'posts', deletingPost.id));
+          toast({ title: "Postingan berhasil dihapus." });
+          setDeletingPost(null);
+      } catch (error) {
+          console.error("Error deleting post:", error);
+          toast({ variant: "destructive", title: "Gagal menghapus postingan." });
       }
   };
 
@@ -270,6 +325,7 @@ export default function PostPage() {
         ) : (
           posts.map(post => {
             const isLiked = user && post.likes ? post.likes.includes(user.uid) : false;
+            const isOwner = user && user.uid === post.userId;
             return (
                 <Card key={post.id} className={neumorphicCardStyle}>
                   <CardHeader className="flex flex-row items-center gap-3 p-4">
@@ -277,12 +333,31 @@ export default function PostPage() {
                       <AvatarImage src={post.userAvatar} />
                       <AvatarFallback>{post.userName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-1">
                         <p className="font-semibold">{post.userName}</p>
                         <p className="text-xs text-muted-foreground">
                              {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
                         </p>
                     </div>
+                     {isOwner && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                    <MoreVertical className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setEditingPost(post)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Ubah Keterangan</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDeletingPost(post)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Hapus</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                     )}
                   </CardHeader>
                   <CardContent className="p-0">
                     {post.caption && <p className="px-4 pb-3 text-sm">{post.caption}</p>}
@@ -321,8 +396,49 @@ export default function PostPage() {
       </main>
       
       {user && <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />}
+
+      {/* Edit Caption Dialog */}
+       <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Ubah Keterangan</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleUpdateCaption)} className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="caption"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Keterangan</FormLabel>
+                                  <FormControl>
+                                      <Textarea {...field} className="h-24 resize-none bg-background rounded-lg shadow-neumorphic-inset" />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <Button type="submit" className="w-full">Simpan Perubahan</Button>
+                  </form>
+              </Form>
+          </DialogContent>
+       </Dialog>
+      
+      {/* Delete Post Alert */}
+       <AlertDialog open={!!deletingPost} onOpenChange={(open) => !open && setDeletingPost(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus Postingan?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tindakan ini tidak dapat diurungkan. Postingan Anda akan dihapus secara permanen.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeletePost}>Hapus</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+       </AlertDialog>
     </div>
   );
 }
-
-    
