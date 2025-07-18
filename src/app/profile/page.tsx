@@ -287,10 +287,7 @@ export default function ProfilePage() {
        <AlertDialog open={showFeedbackDialog}>
             <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="text-center text-xl font-headline">Bagaimana Pengalaman Anda?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-center text-muted-foreground">
-                        Penilaian Anda membantu kami meningkatkan aplikasi ini.
-                    </AlertDialogDescription>
+                    <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
                     <Button 

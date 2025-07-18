@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -54,38 +54,47 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const isOpank = currentUser.uid === superUserUid;
         setIsSuperUser(isOpank);
         
-        const docRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setUserData(data);
-        }
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setUserData(docSnap.data());
+          }
+          setLoading(false);
+        });
 
         if (isOpank) {
           const usersCollection = collection(db, "users");
-          const usersSnapshot = await getDocs(usersCollection);
-          const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAllUsers(usersList);
-          
-          const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
-          setTotalCollected(total);
+          const unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllUsers(usersList);
+            
+            const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
+            setTotalCollected(total);
 
-          const feedbackQuery = query(collection(db, "users"), where("hasGivenFeedback", "==", true));
-          const feedbackSnapshot = await getDocs(feedbackQuery);
-          const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback));
-          setUserFeedback(feedbackList);
+            const feedbackList = usersList.filter(u => u.hasGivenFeedback).map(u => u as Feedback);
+            setUserFeedback(feedbackList);
+          });
+          
+          return () => {
+            unsubscribeUser();
+            unsubscribeAllUsers();
+          };
         }
 
+        return () => unsubscribeUser();
+
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => unsubscribeAuth();
   }, [auth, db]);
 
   const handleAddMoney = async (data: MoneyFormValues) => {
@@ -114,13 +123,6 @@ export default function Home() {
           amount: amountToAdd,
         });
       });
-
-      // Refresh data
-      const usersSnapshot = await getDocs(collection(db, "users"));
-      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllUsers(usersList);
-      const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
-      setTotalCollected(total);
 
       setEditingUser(null);
       form.reset({ amount: 0 });
