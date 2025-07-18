@@ -236,7 +236,7 @@ export default function PostPage() {
 
       if (postDoc.exists()) {
           const postData = postDoc.data() as Post;
-          if (postData.likes.includes(user.uid)) {
+          if (postData.likes && postData.likes.includes(user.uid)) {
               // Unlike
               await updateDoc(postRef, {
                   likes: arrayRemove(user.uid)
@@ -269,7 +269,7 @@ export default function PostPage() {
             </Card>
         ) : (
           posts.map(post => {
-            const isLiked = user ? post.likes.includes(user.uid) : false;
+            const isLiked = user && post.likes ? post.likes.includes(user.uid) : false;
             return (
                 <Card key={post.id} className={neumorphicCardStyle}>
                   <CardHeader className="flex flex-row items-center gap-3 p-4">
@@ -310,7 +310,7 @@ export default function PostPage() {
                               <Heart className={cn("h-6 w-6", isLiked && "fill-current")} />
                           </Button>
                           <span className="text-sm font-medium text-muted-foreground">
-                              {post.likes.length} suka
+                              {(post.likes || []).length} suka
                           </span>
                       </div>
                   </CardFooter>
