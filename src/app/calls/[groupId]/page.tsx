@@ -113,24 +113,24 @@ const AudioPlayer = ({ src, showDelete, onDelete }: { src: string, showDelete: b
                 ))}
             </div>
              {showDelete && (
-                <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center h-8 w-8 ml-2">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={onDelete}>Hapus</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center h-8 w-8">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={onDelete}>Hapus</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                 </AlertDialog>
             )}
         </div>
@@ -191,6 +191,10 @@ export default function GroupChatPage() {
     
             const result = formatDistanceLocale[token as keyof typeof formatDistanceLocale]?.replace('{{count}}', count.toString()) ?? '';
     
+            if (!options?.addSuffix) {
+                return result.replace(/ yang lalu|sekitar |kurang dari /g, '').trim();
+            }
+
             return result;
         },
     };
@@ -459,7 +463,7 @@ const startRecording = async () => {
     return (
         <div className="flex flex-col h-screen bg-background">
             <header className="flex items-center p-4 border-b border-border shadow-sm sticky top-0 bg-background z-10">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <Button variant="ghost" size="icon" onClick={() => router.push('/calls')}>
                     <ArrowLeft />
                 </Button>
                 <div className="ml-4">

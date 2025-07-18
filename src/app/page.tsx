@@ -228,13 +228,43 @@ export default function Home() {
                                   <p className="font-semibold text-foreground">{u.displayName}</p>
                                   <p className="text-sm text-muted-foreground">{u.email}</p>
                               </div>
-                              <Button 
-                                size="icon" 
-                                className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
-                                onClick={() => setEditingUser(u)}
-                              >
-                                  <Plus className="h-5 w-5 text-primary-foreground" />
-                              </Button>
+                              <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
+                                <DialogTrigger asChild>
+                                    <Button 
+                                      size="icon" 
+                                      className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
+                                      onClick={() => setEditingUser(u)}
+                                    >
+                                        <Plus className="h-5 w-5 text-primary-foreground" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                    <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
+                                    <DialogDescription>
+                                        Tindakan ini akan menambah saldo 'Uang Terkumpul' secara global. Notifikasi akan dikirim atas nama {editingUser?.displayName}.
+                                    </DialogDescription>
+                                    </DialogHeader>
+                                    <Form {...form}>
+                                    <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
+                                        <FormField
+                                        control={form.control}
+                                        name="amount"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Jumlah (IDR)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                        <Button type="submit" className="w-full">Tambah</Button>
+                                    </form>
+                                    </Form>
+                                </DialogContent>
+                              </Dialog>
                           </div>
                       ))}
                   </div>
@@ -275,35 +305,6 @@ export default function Home() {
           )}
         </aside>
       </main>
-
-      <Dialog open={!!editingUser} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
-        <DialogContent>
-            <DialogHeader>
-            <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
-            <DialogDescription>
-                Tindakan ini akan menambah saldo 'Uang Terkumpul' secara global. Notifikasi akan dikirim atas nama {editingUser?.displayName}.
-            </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
-                <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Jumlah (IDR)</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <Button type="submit" className="w-full">Tambah</Button>
-            </form>
-            </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

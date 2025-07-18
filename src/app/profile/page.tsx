@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useDialogBackButton } from "@/components/layout/app-shell";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
@@ -44,6 +45,39 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
+
+function FeedbackDialog({ open, onOpenChange, onFeedbackSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, onFeedbackSubmit: (feedback: 'like' | 'dislike') => void }) {
+    useDialogBackButton(open, onOpenChange);
+
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => onFeedbackSubmit('like')}
+                    >
+                        <ThumbsUp className="h-10 w-10 text-green-500" />
+                    </Button>
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => onFeedbackSubmit('dislike')}
+                    >
+                        <ThumbsDown className="h-10 w-10 text-red-500" />
+                    </Button>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -284,31 +318,11 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-       <AlertDialog open={showFeedbackDialog}>
-            <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => handleFeedback('like')}
-                    >
-                        <ThumbsUp className="h-10 w-10 text-green-500" />
-                    </Button>
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => handleFeedback('dislike')}
-                    >
-                        <ThumbsDown className="h-10 w-10 text-red-500" />
-                    </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+       <FeedbackDialog 
+         open={showFeedbackDialog}
+         onOpenChange={setShowFeedbackDialog}
+         onFeedbackSubmit={handleFeedback}
+       />
     </div>
   );
 }

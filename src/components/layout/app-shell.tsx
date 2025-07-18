@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, TouchEvent, useEffect } from 'react';
+import React, { useState, TouchEvent, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Smartphone } from 'lucide-react';
@@ -13,6 +13,44 @@ import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
 
 const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
+
+// Helper untuk mengelola state dialog untuk tombol kembali
+const dialogState = {
+  isOpen: false,
+  close: () => {},
+};
+
+export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolean) => void) {
+  useEffect(() => {
+    if (isOpen) {
+      // Dialog terbuka, dorong state baru ke riwayat
+      window.history.pushState({ dialogOpen: true }, '');
+
+      dialogState.isOpen = true;
+      dialogState.close = () => onOpenChange(false);
+
+      const handlePopState = (event: PopStateEvent) => {
+        if (dialogState.isOpen) {
+          dialogState.close();
+          // Mencegah navigasi kembali lebih lanjut
+          event.preventDefault();
+        }
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        dialogState.isOpen = false;
+      };
+    } else if (dialogState.isOpen) {
+        // Dialog ditutup secara manual, kembali satu langkah di riwayat
+        window.history.back();
+        dialogState.isOpen = false;
+    }
+  }, [isOpen, onOpenChange]);
+}
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
@@ -47,9 +85,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Handle Android back button
   useEffect(() => {
-    const handlePopState = () => {
-      // This forces a back navigation via the router when the browser's back button is used.
-      router.back();
+    const handlePopState = (event: PopStateEvent) => {
+      if (dialogState.isOpen) {
+        dialogState.close();
+        event.preventDefault();
+        return;
+      }
+      // Biarkan browser menangani navigasi kembali jika tidak ada dialog yang terbuka
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -57,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [router]);
+  }, []);
 
 
   const handleTouchStart = (e: TouchEvent) => {

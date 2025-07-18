@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { CustomLoader } from "@/components/layout/loader";
+import { useDialogBackButton } from "@/components/layout/app-shell";
 
 const groupFormSchema = z.object({
   name: z.string().min(3, "Nama grup minimal 3 karakter."),
@@ -40,6 +41,52 @@ type Group = {
 
 const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
 
+function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, editingGroup: Group | null, onSubmit: (data: GroupFormValues) => void }) {
+  const form = useForm<GroupFormValues>({
+    resolver: zodResolver(groupFormSchema),
+    defaultValues: { name: "" },
+  });
+
+  useDialogBackButton(open, onOpenChange);
+
+  useEffect(() => {
+    if (editingGroup) {
+      form.setValue("name", editingGroup.name);
+    } else {
+      form.reset({ name: "" });
+    }
+  }, [editingGroup, form, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{editingGroup ? 'Ubah Nama Grup' : 'Buat Grup Baru'}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>{editingGroup ? 'Nama Grup Baru' : 'Nama Grup'}</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Contoh: Tim Proyek Hebat" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <Button type="submit" className="w-full">{editingGroup ? 'Simpan Perubahan' : 'Buat Grup'}</Button>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isSuperUser, setIsSuperUser] = useState(false);
@@ -54,21 +101,6 @@ export default function VoiceNoteGroupsPage() {
   const db = getFirestore(app);
   const router = useRouter();
   const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
-
-  const form = useForm<GroupFormValues>({
-    resolver: zodResolver(groupFormSchema),
-    defaultValues: {
-      name: "",
-    },
-  });
-
-  useEffect(() => {
-    if (editingGroup) {
-      form.setValue("name", editingGroup.name);
-    } else {
-      form.reset({ name: "" });
-    }
-  }, [editingGroup, form]);
 
    useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -162,7 +194,6 @@ export default function VoiceNoteGroupsPage() {
             });
             setIsCreatingGroup(false);
         }
-        form.reset();
     } catch (error) {
        console.error("Error saving group:", error);
     }
@@ -206,7 +237,7 @@ export default function VoiceNoteGroupsPage() {
                 <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
                  {(isSuperUser || user?.uid === group.createdBy) && (
                   <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
-                    <Dialog open={editingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}>
+                    <Dialog open={editingGroup?.id === group.id} onOpenChange={(isOpen) => isOpen ? setEditingGroup(group) : setEditingGroup(null)}>
                         <DialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingGroup(group)}>
                                 <Pencil className="h-4 w-4" />
@@ -284,59 +315,21 @@ export default function VoiceNoteGroupsPage() {
                   <span className="sr-only">Buat Grup Baru</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Buat Grup Baru</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nama Grup</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Contoh: Tim Proyek Hebat" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full">Buat Grup</Button>
-                  </form>
-                </Form>
-              </DialogContent>
             </Dialog>
          )}
       </main>
 
-      {/* Edit Group Dialog */}
-      <Dialog open={!!editingGroup} onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Ubah Nama Grup</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nama Grup Baru</FormLabel>
-                            <FormControl>
-                            <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit" className="w-full">Simpan Perubahan</Button>
-                </form>
-            </Form>
-        </DialogContent>
-      </Dialog>
+      <CreateEditGroupDialog 
+        open={isCreatingGroup || !!editingGroup}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setIsCreatingGroup(false);
+            setEditingGroup(null);
+          }
+        }}
+        editingGroup={editingGroup}
+        onSubmit={onGroupSubmit}
+      />
     </div>
   );
 }
