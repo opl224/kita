@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote } from "lucide-react";
+import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
@@ -35,6 +35,40 @@ type Feedback = {
   feedback: 'like' | 'dislike';
 };
 
+const ITEMS_PER_PAGE = 5;
+
+const PaginationControls = ({ currentPage, totalPages, onPageChange, className }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void, className?: string }) => {
+  if (totalPages <= 1) return null;
+
+  const neumorphicPaginationStyle = "h-10 w-10 bg-background rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all disabled:opacity-50 disabled:shadow-none";
+
+  return (
+    <div className={cn("flex items-center justify-center gap-4 mt-4", className)}>
+      <Button
+        size="icon"
+        className={neumorphicPaginationStyle}
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="h-5 w-5" />
+        <span className="sr-only">Halaman Sebelumnya</span>
+      </Button>
+      <span className="text-sm font-medium text-muted-foreground tabular-nums">
+        Hal {currentPage} / {totalPages}
+      </span>
+      <Button
+        size="icon"
+        className={neumorphicPaginationStyle}
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="h-5 w-5" />
+        <span className="sr-only">Halaman Berikutnya</span>
+      </Button>
+    </div>
+  );
+};
+
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +80,10 @@ export default function Home() {
   const [totalCollected, setTotalCollected] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
+
+  // Pagination states
+  const [allUsersPage, setAllUsersPage] = useState(1);
+  const [feedbackPage, setFeedbackPage] = useState(1);
   
   // State for Avatar Dialog
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
@@ -190,6 +228,13 @@ export default function Home() {
 
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
+
+  // Pagination logic
+  const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
+
+  const totalFeedbackPages = Math.ceil(userFeedback.length / ITEMS_PER_PAGE);
+  const paginatedFeedback = userFeedback.slice((feedbackPage - 1) * ITEMS_PER_PAGE, feedbackPage * ITEMS_PER_PAGE);
   
   if (loading) {
     return <CustomLoader />;
@@ -247,7 +292,7 @@ export default function Home() {
               </CardHeader>
               <CardContent className="p-0">
                   <div className="space-y-4">
-                      {allUsers.map((u) => (
+                      {paginatedUsers.map((u) => (
                           <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
                               <Avatar className="h-10 w-10 border-none rounded-full">
                                   <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
@@ -297,6 +342,11 @@ export default function Home() {
                           </div>
                       ))}
                   </div>
+                  <PaginationControls 
+                    currentPage={allUsersPage}
+                    totalPages={totalUserPages}
+                    onPageChange={setAllUsersPage}
+                  />
               </CardContent>
             </Card>
 
@@ -309,7 +359,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="space-y-4">
-                        {userFeedback.length > 0 ? userFeedback.map((fb) => (
+                        {paginatedFeedback.length > 0 ? paginatedFeedback.map((fb) => (
                             <div key={fb.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
                                 <Avatar className="h-10 w-10 border-none rounded-full">
                                     <AvatarImage src={fb.avatarUrl} alt={fb.displayName} className="rounded-full" />
@@ -328,6 +378,11 @@ export default function Home() {
                             <p className="text-muted-foreground text-center py-4">Belum ada penilaian.</p>
                         )}
                     </div>
+                     <PaginationControls 
+                        currentPage={feedbackPage}
+                        totalPages={totalFeedbackPages}
+                        onPageChange={setFeedbackPage}
+                    />
                 </CardContent>
             </Card>
             </>
