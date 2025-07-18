@@ -82,7 +82,6 @@ export default function Home() {
 
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<MoneyFormValues>({
     resolver: zodResolver(moneyFormSchema),
@@ -95,16 +94,13 @@ export default function Home() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        const isOpank = currentUser.uid === superUserUid;
-        setIsSuperUser(isOpank);
-        setLoading(false); 
       } else {
         router.push('/login');
       }
     });
 
     return () => unsubscribeAuth();
-  }, [auth, db, router]);
+  }, [auth, router]);
 
   useEffect(() => {
     if (!user) {
@@ -112,19 +108,19 @@ export default function Home() {
       setAllUsers([]);
       setTotalCollected(0);
       setMyTotalLikes(0);
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
     const userDocRef = doc(db, "users", user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setUserData(data);
-        // Check for superuser status from the document itself
-        if (data.isSuperUser) {
-          setIsSuperUser(true);
-        }
+        setIsSuperUser(!!data.isSuperUser); // Reliably set superuser status
       }
+      setLoading(false);
     });
 
     const appStateRef = doc(db, "appState", "main");
