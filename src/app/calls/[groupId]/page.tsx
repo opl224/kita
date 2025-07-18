@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+export const dynamic = 'force-dynamic';
+
 type Message = {
     id: string;
     senderId: string;
@@ -595,3 +597,5 @@ const startRecording = async () => {
         </div>
     );
 }
+
+    
