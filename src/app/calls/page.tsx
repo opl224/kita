@@ -11,7 +11,6 @@ import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, wher
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,7 +52,6 @@ export default function VoiceNoteGroupsPage() {
 
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { toast } = useToast();
   const router = useRouter();
   const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
@@ -138,17 +136,12 @@ export default function VoiceNoteGroupsPage() {
         setLoading(false);
     }, (error) => {
       console.error("Error fetching groups:", error);
-      toast({
-        title: "Gagal memuat grup",
-        description: "Terjadi kesalahan perizinan saat mengambil data. Pastikan aturan keamanan Anda benar.",
-        variant: "destructive"
-      });
       setLoading(false);
     });
 
     return () => unsubscribeGroups();
 
-  }, [db, user, toast]);
+  }, [db, user]);
 
   const onGroupSubmit = async (data: GroupFormValues) => {
     if (!user) return;
@@ -156,10 +149,6 @@ export default function VoiceNoteGroupsPage() {
         if (editingGroup) {
             const groupRef = doc(db, 'groups', editingGroup.id);
             await updateDoc(groupRef, { name: data.name });
-            toast({
-                title: "Grup Diperbarui",
-                description: `Nama grup telah diubah menjadi "${data.name}".`,
-            });
             setEditingGroup(null);
         } else {
             const groupsCollection = collection(db, 'groups');
@@ -171,19 +160,11 @@ export default function VoiceNoteGroupsPage() {
                 lastMessage: "Grup baru saja dibuat.",
                 lastMessageTime: serverTimestamp()
             });
-            toast({
-                title: "Grup Dibuat",
-                description: `Grup "${data.name}" berhasil dibuat.`,
-            });
             setIsCreatingGroup(false);
         }
         form.reset();
     } catch (error) {
-       toast({
-        title: editingGroup ? "Gagal Memperbarui Grup" : "Gagal Membuat Grup",
-        description: "Terjadi kesalahan saat menyimpan perubahan.",
-        variant: "destructive",
-      });
+       console.error("Error saving group:", error);
     }
   };
 
@@ -192,22 +173,8 @@ export default function VoiceNoteGroupsPage() {
 
     try {
       await deleteDoc(doc(db, 'groups', deletingGroup.id));
-
-      toast({
-        title: "Grup Dihapus",
-        description: `Grup "${deletingGroup.name}" telah dihapus.`,
-      });
     } catch (error) {
       console.error("Error deleting group:", error);
-      let description = "Terjadi kesalahan saat menghapus grup.";
-      if (error instanceof Error && (error as any).code === 'permission-denied') {
-          description = "Anda tidak memiliki izin untuk menghapus grup ini. Pastikan aturan keamanan Firebase Anda mengizinkan penghapusan.";
-      }
-      toast({
-        title: "Gagal Menghapus Grup",
-        description: description,
-        variant: "destructive",
-      });
     } finally {
         setDeletingGroup(null);
     }

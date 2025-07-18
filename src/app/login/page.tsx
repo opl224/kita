@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 
 const loginFormSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -29,7 +28,6 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset
 
 
 export default function LoginPage() {
-  const { toast } = useToast();
   const router = useRouter();
   const auth = getAuth(app);
 
@@ -45,17 +43,9 @@ export default function LoginPage() {
   async function onSubmit(data: LoginFormValues) {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "Berhasil Masuk",
-        description: "Selamat datang kembali!",
-      });
       router.push('/');
     } catch (error) {
-      toast({
-        title: "Gagal Masuk",
-        description: "Email atau kata sandi salah. Silakan coba lagi.",
-        variant: "destructive",
-      });
+      console.error("Login failed:", error);
     }
   }
 

@@ -16,10 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 
 const signupFormSchema = z.object({
-  displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
+  displayName: z.string().min(4, "Nama pengguna minimal 4 karakter."),
   email: z.string().email("Format email tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter."),
   confirmPassword: z.string().min(8, "Kata sandi minimal 8 karakter."),
@@ -36,7 +35,6 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset
 
 
 export default function SignupPage() {
-  const { toast } = useToast();
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -78,21 +76,9 @@ export default function SignupPage() {
         hasGivenFeedback: false,
       });
 
-      toast({
-        title: "Pendaftaran Berhasil",
-        description: "Akun Anda telah dibuat. Anda akan diarahkan.",
-      });
       router.push('/');
     } catch (error: any) {
-        let errorMessage = "Terjadi kesalahan saat membuat akun.";
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = "Email ini sudah terdaftar.";
-        }
-      toast({
-        title: "Gagal Mendaftar",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        console.error("Signup failed:", error);
     }
   }
 

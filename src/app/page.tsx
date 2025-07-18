@@ -10,7 +10,6 @@ import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serv
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,7 +44,6 @@ export default function Home() {
 
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { toast } = useToast();
   const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<MoneyFormValues>({
@@ -117,11 +115,6 @@ export default function Home() {
         });
       });
 
-      toast({
-        title: "Berhasil",
-        description: `Uang berhasil ditambahkan untuk ${editingUser.displayName}.`,
-      });
-
       // Refresh data
       const usersSnapshot = await getDocs(collection(db, "users"));
       const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -134,11 +127,6 @@ export default function Home() {
 
     } catch (error) {
        console.error("Error adding money:", error);
-       toast({
-        title: "Gagal",
-        description: "Gagal memperbarui jumlah uang.",
-        variant: "destructive",
-      });
     }
   };
 

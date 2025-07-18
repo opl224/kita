@@ -10,7 +10,6 @@ import { app } from "@/lib/firebase";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { CustomLoader } from "@/components/layout/loader";
 
 type Notification = {
@@ -36,7 +35,6 @@ export default function NotificationsPage() {
   const [processingInvite, setProcessingInvite] = useState<string | null>(null);
   const db = getFirestore(app);
   const auth = getAuth(app);
-  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -122,17 +120,14 @@ export default function NotificationsPage() {
                 status: 'accepted'
             });
 
-            toast({ title: "Berhasil!", description: `Anda telah bergabung dengan grup ${invitation.groupName}.` });
         } else {
             // Just update the invitation status to rejected
             await updateDoc(invitationRef, {
                 status: 'rejected'
             });
-            toast({ title: "Undangan Ditolak", description: `Anda menolak undangan ke grup ${invitation.groupName}.` });
         }
     } catch (error) {
         console.error("Error handling invitation:", error);
-        toast({ title: "Gagal", description: "Terjadi kesalahan saat memproses undangan. Pastikan aturan keamanan Anda benar.", variant: "destructive" });
     } finally {
         setProcessingInvite(null);
     }
@@ -178,7 +173,7 @@ export default function NotificationsPage() {
                                        </p>
                                        <div className="flex gap-2 mt-3">
                                             <Button size="sm" onClick={() => handleInvitation(invite, true)} disabled={!!processingInvite}>
-                                                {processingInvite === invite.id ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Terima'}
+                                                {processingInvite === invite.id ? <CustomLoader /> : 'Terima'}
                                             </Button>
                                             <Button size="sm" variant="ghost" onClick={() => handleInvitation(invite, false)} disabled={!!processingInvite}>
                                                 Tolak

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./loader.css";
 import { AppShell } from "@/components/layout/app-shell";
-import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
@@ -30,7 +29,6 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <AppShell>{children}</AppShell>
-            <Toaster />
         </ThemeProvider>
       </body>
     </html>

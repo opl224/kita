@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { Camera, LogOut, Loader, Moon, Sun, ThumbsUp, ThumbsDown } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
 import {
@@ -31,7 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
-  displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
+  displayName: z.string().min(4, "Nama pengguna minimal 4 karakter."),
   email: z.string().email("Format email tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter.").optional().or(z.literal('')),
   confirmPassword: z.string().min(8, "Kata sandi minimal 8 karakter.").optional().or(z.literal('')),
@@ -47,7 +46,6 @@ const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-l
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
 export default function ProfilePage() {
-  const { toast } = useToast();
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -114,28 +112,14 @@ export default function ProfilePage() {
                 avatarUrl: base64data
             });
             setAvatarUrl(base64data);
-            toast({
-                title: "Avatar Diperbarui",
-                description: "Avatar Anda telah berhasil diubah.",
-            });
         } catch (error) {
             console.error("Error uploading avatar: ", error);
-            toast({
-                title: "Gagal Mengunggah",
-                description: "Terjadi kesalahan saat mengubah avatar Anda.",
-                variant: "destructive",
-            });
         } finally {
             setIsUploading(false);
         }
     };
     reader.onerror = (error) => {
         console.error("Error reading file:", error);
-        toast({
-            title: "Gagal Membaca File",
-            description: "Tidak dapat memproses file yang Anda pilih.",
-            variant: "destructive",
-        });
         setIsUploading(false);
     };
   };
@@ -149,16 +133,8 @@ export default function ProfilePage() {
             hasGivenFeedback: true
         });
         setShowFeedbackDialog(false);
-        toast({
-            title: "Terima Kasih!",
-            description: "Penilaian Anda sangat berarti bagi kami.",
-        });
     } catch (error) {
         console.error("Error submitting feedback:", error);
-        toast({
-            title: "Gagal Memberikan Penilaian",
-            variant: "destructive",
-        });
     }
   }
 
@@ -174,34 +150,17 @@ export default function ProfilePage() {
             await updatePassword(user, data.password);
         }
 
-        toast({
-            title: "Profil Diperbarui",
-            description: "Informasi profil Anda telah berhasil disimpan.",
-        });
     } catch(error) {
         console.error("Error updating profile:", error);
-        toast({
-            title: "Gagal Memperbarui Profil",
-            description: "Terjadi kesalahan saat menyimpan perubahan.",
-            variant: "destructive",
-        });
     }
   }
 
   async function handleLogout() {
     try {
       await signOut(auth);
-      toast({
-        title: "Berhasil Keluar",
-        description: "Anda telah berhasil keluar dari akun Anda.",
-      });
       router.push('/login');
     } catch (error) {
-      toast({
-        title: "Gagal Keluar",
-        description: "Terjadi kesalahan saat mencoba keluar.",
-        variant: "destructive",
-      });
+      console.error("Error signing out:", error);
     }
   }
 
@@ -219,7 +178,7 @@ export default function ProfilePage() {
 
       <div className="flex flex-col gap-6">
         <Card className={`${neumorphicCardStyle} relative`}>
-            <div className="fixed top-4 right-4 z-10">
+            <div className="absolute top-4 right-4 z-10">
                 <Button
                     variant="ghost"
                     size="icon"

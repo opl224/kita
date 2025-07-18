@@ -9,7 +9,6 @@ import { app } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, UserCheck, Loader2 } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
@@ -145,7 +144,6 @@ export default function GroupChatPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const { toast } = useToast();
     const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
     // Custom locale for date-fns to remove "kurang dari" and "yang lalu"
@@ -208,17 +206,16 @@ export default function GroupChatPage() {
                     setGroupInfo(groupData);
 
                     if (!groupData.members.includes(user.uid)) {
-                       toast({ title: "Akses Ditolak", description: "Anda bukan anggota grup ini.", variant: "destructive" });
+                       console.error("Access Denied: User is not a member of this group.");
                        router.push('/calls');
                        return;
                     }
                 } else {
-                    toast({ title: "Grup tidak ditemukan", variant: "destructive" });
+                    console.error("Group not found");
                     router.push('/calls');
                 }
             } catch (error) {
                 console.error("Error getting group info:", error);
-                toast({ title: "Gagal memuat grup", variant: "destructive" });
                 router.push('/calls');
             } finally {
                 setLoading(false);
@@ -238,7 +235,7 @@ export default function GroupChatPage() {
 
         return () => unsubscribeMessages();
 
-    }, [user, groupId, db, router, toast]);
+    }, [user, groupId, db, router]);
 
     // Effect to fetch users for invitation dialog
     useEffect(() => {
@@ -279,11 +276,10 @@ export default function GroupChatPage() {
                 status: 'pending' // pending, accepted, rejected
             });
 
-            toast({ title: "Undangan Terkirim", description: `Undangan telah dikirim ke ${invitedUser.displayName}.` });
+            console.log(`Invitation sent to ${invitedUser.displayName}.`);
             
         } catch (error) {
             console.error("Error sending invitation:", error);
-            toast({ title: "Gagal Mengundang", description: "Terjadi kesalahan saat mengirim undangan.", variant: "destructive" });
         } finally {
             setInvitingUsers(prev => {
                 const newSet = new Set(prev);
@@ -318,17 +314,9 @@ export default function GroupChatPage() {
         if (!groupId) return;
         try {
             await deleteDoc(doc(db, 'groups', groupId, 'messages', messageId));
-            toast({
-                title: "Pesan Dihapus",
-                description: "Pesan suara telah berhasil dihapus.",
-            });
+            console.log("Message deleted successfully.");
         } catch (error) {
             console.error("Error deleting message:", error);
-            toast({
-                title: "Gagal Menghapus",
-                description: "Terjadi kesalahan saat menghapus pesan.",
-                variant: "destructive",
-            });
         }
     };
 
@@ -340,7 +328,7 @@ export default function GroupChatPage() {
             const base64data = await blobToBase64(audioBlob);
 
             if (!base64data) {
-                toast({ title: "Error Audio", description: "Data audio tidak valid.", variant: "destructive"});
+                console.error("Audio data is not valid.");
                 return;
             }
             
@@ -348,7 +336,7 @@ export default function GroupChatPage() {
             const userData = userDoc.data();
 
             if (!userData) {
-                toast({ title: "Error Pengguna", description: "Data pengguna tidak ditemukan.", variant: "destructive"});
+                console.error("User data not found.");
                 return;
             }
 
@@ -368,7 +356,6 @@ export default function GroupChatPage() {
             
         } catch (error) {
             console.error("Error sending voice note:", error);
-            toast({ title: "Gagal Mengirim Pesan", description: "Terjadi kesalahan saat mengonversi atau mengirim audio.", variant: "destructive" });
         }
     };
     
@@ -432,11 +419,6 @@ const startRecording = async () => {
 
     } catch (err) {
         console.error("Error starting recording:", err);
-        toast({ 
-            title: 'Gagal Memulai Rekaman', 
-            description: err instanceof Error ? err.message : 'Pastikan Anda telah memberikan izin mikrofon.', 
-            variant: 'destructive' 
-        });
     }
 };
 
@@ -523,13 +505,12 @@ const startRecording = async () => {
 
                     return (
                         <div key={msg.id} className={`flex items-end gap-3 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                            {!isSender && (
-                               <Avatar className="h-8 w-8 self-end mb-8">
-                                   <AvatarImage src={msg.senderAvatar} />
-                                   <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
-                               </Avatar>
-                           )}
-
+                             {!isSender && (
+                                <Avatar className="h-8 w-8 self-end mb-8">
+                                    <AvatarImage src={msg.senderAvatar} />
+                                    <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
+                                </Avatar>
+                            )}
                             <div className={`flex items-center gap-2 ${isSender ? 'flex-row-reverse' : 'flex-row'}`}>
                                 {isSender && isDeletable && (
                                     <AlertDialog>
