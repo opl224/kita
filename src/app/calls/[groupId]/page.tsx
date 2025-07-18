@@ -192,10 +192,14 @@ export default function GroupChatPage() {
             const result = formatDistanceLocale[token as keyof typeof formatDistanceLocale]?.replace('{{count}}', count.toString()) ?? '';
     
             if (!options?.addSuffix) {
-                return result.replace(/ yang lalu|sekitar |kurang dari /g, '').trim();
+                return result;
             }
 
-            return result;
+            if (token === 'lessThanXMinutes' || token === 'lessThanXSeconds') {
+                return result;
+            }
+
+            return `${result} yang lalu`;
         },
     };
 
@@ -543,7 +547,7 @@ const startRecording = async () => {
                                     </Card>
                                     <div className="flex items-center gap-2 mt-1 px-1">
                                         <p className="text-xs text-muted-foreground">
-                                            {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) : ''}
+                                            {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true, locale: customLocale }) : ''}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             {formatTime(msg.duration || 0)}
