@@ -174,19 +174,6 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
-      <div className="fixed top-4 right-4 z-20">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
-        >
-          <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </div>
-
       <header className="pt-4">
         <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Profil Saya
@@ -194,8 +181,18 @@ export default function ProfilePage() {
       </header>
 
       <div className="flex flex-col gap-6">
-        <Card className={neumorphicCardStyle}>
-          <div className="flex flex-col items-center gap-4 mb-8">
+        <Card className={`${neumorphicCardStyle} relative`}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="absolute top-4 right-4 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
+            >
+              <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          <div className="flex flex-col items-center gap-4 mb-8 pt-8">
             <div className="relative">
               <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
                 <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
