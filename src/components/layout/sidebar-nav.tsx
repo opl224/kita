@@ -58,15 +58,19 @@ export function SidebarNav() {
               setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
             });
 
-            // Listener for new group messages
-            const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
+            // Listener for new group messages - simplified query
             const groupsQuery = query(
               collection(db, 'groups'),
-              where('members', 'array-contains', user.uid),
-              where('lastMessageTime', '>', lastSeenCalls)
+              where('members', 'array-contains', user.uid)
             );
             const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
-               setNotificationCounts(prev => ({ ...prev, calls: snapshot.size }));
+               const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
+               const newMessagesCount = snapshot.docs.filter(doc => {
+                 const groupData = doc.data();
+                 const lastMessageTime = groupData.lastMessageTime?.toDate();
+                 return lastMessageTime && lastMessageTime > lastSeenCalls;
+               }).length;
+               setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
             });
 
             return () => {

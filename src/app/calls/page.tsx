@@ -138,8 +138,7 @@ export default function VoiceNoteGroupsPage() {
     const groupsCollection = collection(db, 'groups');
     const q = query(
       groupsCollection, 
-      where('members', 'array-contains', user.uid), 
-      orderBy('lastMessageTime', 'desc')
+      where('members', 'array-contains', user.uid)
     );
 
     const unsubscribeGroups = onSnapshot(q, async (querySnapshot) => {
