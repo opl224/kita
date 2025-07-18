@@ -70,6 +70,7 @@ export default function SignupPage() {
         avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`,
         lastSeenNotifications: new Date(0),
         lastSeenCalls: new Date(0),
+        hasGivenFeedback: false,
       };
 
       if (user.uid === SUPER_USER_UID) {
@@ -169,3 +170,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

@@ -3,10 +3,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -121,6 +121,33 @@ export default function Home() {
             setUserData(data);
             const userIsAdmin = !!data.isSuperUser;
             setIsSuperUser(userIsAdmin);
+
+            // Admin-only data fetching
+            if (userIsAdmin) {
+                const usersQuery = query(collection(db, "users"));
+                const allUsersUnsubscribe = onSnapshot(usersQuery, (usersSnapshot) => {
+                    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    const postsQuery = query(collection(db, "posts"));
+                    const postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
+                        const likesCountByUser: { [userId: string]: number } = {};
+                        postsSnapshot.forEach(postDoc => {
+                            const post = postDoc.data();
+                            const postOwnerId = post.userId;
+                            const likesCount = (post.likes || []).length;
+                            likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
+                        });
+
+                        const usersWithLikes = usersList.map(u => ({
+                            ...u,
+                            totalLikes: likesCountByUser[u.id] || 0
+                        }));
+                        setAllUsers(usersWithLikes);
+                    });
+                    unsubscribes.push(postsUnsubscribe);
+                });
+                unsubscribes.push(allUsersUnsubscribe);
+            }
         }
         setLoading(false);
     });
@@ -151,45 +178,6 @@ export default function Home() {
         unsubscribes.forEach(unsub => unsub());
     };
   }, [user, db]);
-
-  // useEffect for admin-only data
-  useEffect(() => {
-    if (!isSuperUser) {
-        setAllUsers([]);
-        return;
-    }
-    
-    // Listener for all users data and their posts to calculate likes
-    const usersQuery = query(collection(db, "users"));
-    const allUsersUnsubscribe = onSnapshot(usersQuery, (usersSnapshot) => {
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        const postsQuery = query(collection(db, "posts"));
-        const postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
-            const likesCountByUser: { [userId: string]: number } = {};
-            postsSnapshot.forEach(postDoc => {
-                const post = postDoc.data();
-                const postOwnerId = post.userId;
-                const likesCount = (post.likes || []).length;
-                likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
-            });
-
-            const usersWithLikes = usersList.map(u => ({
-                ...u,
-                totalLikes: likesCountByUser[u.id] || 0
-            }));
-            setAllUsers(usersWithLikes);
-        });
-
-        // Cleanup posts listener when users listener re-runs
-        return () => postsUnsubscribe();
-    });
-
-    // Cleanup users listener on component unmount or when isSuperUser changes
-    return () => allUsersUnsubscribe();
-    
-  }, [isSuperUser, db]);
-
 
   const handleAddMoney = async (data: MoneyFormValues) => {
     if (!user || !editingUser || !isSuperUser) return;
@@ -225,6 +213,31 @@ export default function Home() {
     }
   };
 
+  const handleFeedback = async (feedback: 'like' | 'dislike') => {
+    if (!user || !userData) return;
+
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const feedbackDocRef = doc(collection(db, 'userFeedback'));
+        
+        // Record the feedback
+        await setDoc(feedbackDocRef, {
+            userId: user.uid,
+            userName: userData.displayName,
+            feedback: feedback,
+            createdAt: serverTimestamp()
+        });
+        
+        // Mark user as having given feedback
+        await updateDoc(userDocRef, {
+            hasGivenFeedback: true
+        });
+
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
+    }
+  };
+
   async function handleLogout() {
     try {
       await signOut(auth);
@@ -240,6 +253,8 @@ export default function Home() {
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
   
+  const showFeedbackCard = !loading && userData && !userData.isSuperUser && userData.hasGivenFeedback === false;
+
   if (loading) {
     return <CustomLoader />;
   }
@@ -270,6 +285,24 @@ export default function Home() {
       </header>
       
       <main className="flex flex-col gap-8">
+        
+        {showFeedbackCard && (
+            <Card className={`${neumorphicCardStyle} p-6`}>
+                <CardContent className="p-0 flex flex-col items-center text-center gap-4">
+                    <h3 className="font-headline font-semibold text-foreground">Suka dengan aplikasi ini?</h3>
+                    <p className="text-sm text-muted-foreground">Beri tahu kami pendapat Anda agar kami bisa membuatnya lebih baik.</p>
+                    <div className="flex gap-4 mt-2">
+                        <Button size="icon" className="h-16 w-16 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset" onClick={() => handleFeedback('like')}>
+                            <ThumbsUp className="h-8 w-8" />
+                        </Button>
+                        <Button size="icon" variant="secondary" className="h-16 w-16 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset" onClick={() => handleFeedback('dislike')}>
+                             <ThumbsDown className="h-8 w-8" />
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
                 <div className="flex items-center justify-between gap-4 text-primary">
@@ -301,7 +334,7 @@ export default function Home() {
 
 
         <aside className="flex flex-col gap-8">
-           {isSuperUser && (
+           {isSuperUser && allUsers.length > 0 && (
             <Card className={`${neumorphicCardStyle} p-6`}>
               <CardHeader className="p-0 mb-4">
                   <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
@@ -394,3 +427,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
