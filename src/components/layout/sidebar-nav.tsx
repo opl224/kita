@@ -7,7 +7,7 @@ import { Home, AudioWaveform, Bell, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -42,14 +42,9 @@ export function SidebarNav() {
       return;
     }
   
-    let unsubscribeInvites = () => {};
-    let unsubscribeNotifications = () => {};
-    let unsubscribeGroups = () => {};
-  
-    const setupListeners = async () => {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+    // Listener for user document changes (including lastSeen timestamps)
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribeUserDoc = onSnapshot(userDocRef, (userDocSnap) => {
         if (!userDocSnap.exists()) return;
         
         const userData = userDocSnap.data();
@@ -69,35 +64,31 @@ export function SidebarNav() {
           where("createdAt", ">", lastSeenNotifications)
         );
 
-        let currentInvitesCount = 0;
-        let currentGeneralNotifsCount = 0;
+        const unsubscribeInvites = onSnapshot(invitationsQuery, (invitesSnapshot) => {
+            const newInvitesCount = invitesSnapshot.size;
+            
+            const unsubscribeGeneralNotifs = onSnapshot(notificationsQuery, (generalNotifsSnapshot) => {
+                const newGeneralNotifsCount = generalNotifsSnapshot.size;
+                setNotificationCounts(prev => ({ ...prev, notifications: newInvitesCount + newGeneralNotifsCount }));
+            });
 
-        const updateTotalNotifs = () => {
-            setNotificationCounts(prev => ({ ...prev, notifications: currentInvitesCount + currentGeneralNotifsCount }));
-        };
-
-        unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
-          currentInvitesCount = snapshot.size;
-          updateTotalNotifs();
+            return () => unsubscribeGeneralNotifs();
         });
 
-        unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
-          currentGeneralNotifsCount = snapshot.size;
-          updateTotalNotifs();
-        });
-  
         // Listener for new voice notes in groups
         const groupsQuery = query(
           collection(db, 'groups'),
           where('members', 'array-contains', user.uid)
         );
   
-        unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
+        const unsubscribeGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
           let newMessagesCount = 0;
           groupsSnapshot.forEach(groupDoc => {
             const groupData = groupDoc.data();
             const lastMessageTime = groupData.lastMessageTime?.toDate();
+            // Check if lastMessageTime is more recent than lastSeenCalls
             if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+               // Only count as new if not on the calls page
               if (pathname !== '/calls') {
                 newMessagesCount++;
               }
@@ -105,17 +96,17 @@ export function SidebarNav() {
           });
           setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
         });
-      } catch (error) {
-        console.error("Error setting up notification listeners:", error);
-      }
-    };
-  
-    setupListeners();
+
+        return () => {
+            unsubscribeInvites();
+            unsubscribeGroups();
+        };
+    }, (error) => {
+        console.error("Error setting up user doc listener:", error);
+    });
   
     return () => {
-      unsubscribeInvites();
-      unsubscribeNotifications();
-      unsubscribeGroups();
+      unsubscribeUserDoc();
     };
   }, [db, user, pathname]);
 
