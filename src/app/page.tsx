@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote, ChevronLeft, ChevronRight } from "lucide-react";
+import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
@@ -78,6 +78,7 @@ export default function Home() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
+  const [totalLikes, setTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
 
@@ -124,6 +125,7 @@ export default function Home() {
       setAllUsers([]);
       setUserFeedback([]);
       setTotalCollected(0);
+      setTotalLikes(0);
       return;
     }
 
@@ -142,9 +144,9 @@ export default function Home() {
     });
 
     let unsubscribeAllUsers: (() => void) | undefined;
+    let unsubscribePosts: (() => void) | undefined;
     if (isSuperUser) {
         const usersCollection = collection(db, "users");
-        // For super-user, get all users for management. For others, this listener is skipped.
         unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
             const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllUsers(usersList);
@@ -157,22 +159,34 @@ export default function Home() {
             }));
             setUserFeedback(feedbackList);
         }, (error) => {
-            // This might fail if rules don't permit listing all users.
-            // A super-user flag should be checked in the rules.
             console.error("Error fetching all users (ensure rules permit this for super-user):", error);
         });
+
+        const postsCollection = collection(db, "posts");
+        unsubscribePosts = onSnapshot(postsCollection, (postsSnapshot) => {
+            let likesCount = 0;
+            postsSnapshot.forEach(doc => {
+                const post = doc.data();
+                if (post.likes && Array.isArray(post.likes)) {
+                    likesCount += post.likes.length;
+                }
+            });
+            setTotalLikes(likesCount);
+        }, (error) => {
+             console.error("Error fetching posts for likes count:", error);
+        });
+
     } else {
-        // Regular users do not fetch all users.
         setAllUsers([]);
         setUserFeedback([]);
+        setTotalLikes(0);
     }
 
     return () => {
       unsubscribeUser();
       unsubscribeAppState();
-      if (unsubscribeAllUsers) {
-        unsubscribeAllUsers();
-      }
+      if (unsubscribeAllUsers) unsubscribeAllUsers();
+      if (unsubscribePosts) unsubscribePosts();
     };
   }, [user, isSuperUser, db]);
 
@@ -260,19 +274,37 @@ export default function Home() {
       </header>
       
       <main className="flex flex-col gap-8">
-        <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
-            <div className="flex items-center justify-between gap-4 text-primary">
-              <div className="flex items-center gap-4">
-                <DollarSign className="h-8 w-8" />
-                <div className="flex flex-col">
-                  <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
-                  <span className="text-3xl font-bold text-foreground">
-                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)}
-                  </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
+                <div className="flex items-center justify-between gap-4 text-primary">
+                  <div className="flex items-center gap-4">
+                    <DollarSign className="h-8 w-8" />
+                    <div className="flex flex-col">
+                      <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
+                      <span className="text-3xl font-bold text-foreground">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-        </Card>
+            </Card>
+            {isSuperUser && (
+                 <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
+                    <div className="flex items-center justify-between gap-4 text-red-500">
+                        <div className="flex items-center gap-4">
+                            <Heart className="h-8 w-8" />
+                            <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">Total Suka</span>
+                                <span className="text-3xl font-bold text-foreground">
+                                    {totalLikes.toLocaleString('id-ID')}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            )}
+        </div>
+
 
         <aside className="flex flex-col gap-8">
            {isSuperUser && (
@@ -402,5 +434,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
