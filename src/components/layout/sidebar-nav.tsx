@@ -41,48 +41,36 @@ export function SidebarNav() {
       return;
     }
 
-    const userDocRef = doc(db, 'users', user.uid);
+    // Temporarily disabled due to permission issues causing app instability.
+    // This logic needs to be revisited with more robust security rules.
+    const setupNotificationListener = async () => {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef); // Use getDoc instead of onSnapshot for a one-time read
+        if (!userSnap.exists()) return;
 
-    const unsubscribeUser = onSnapshot(userDocRef, (userSnap) => {
-      if (!userSnap.exists()) return;
+        const invitationsQuery = query(
+          collection(db, 'invitations'),
+          where('userId', '==', user.uid),
+          where('status', '==', 'pending')
+        );
 
-      const userData = userSnap.data();
-      const lastSeen = userData.lastSeenNotifications?.toDate() || new Date(0);
+        const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
+          setTotalUnseenCount(snapshot.size); // Only count pending invitations for now
+        });
 
-      const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('createdAt', '>', lastSeen)
-      );
-      
-      const invitationsQuery = query(
-        collection(db, 'invitations'),
-        where('userId', '==', user.uid),
-        where('status', '==', 'pending')
-      );
+        return () => {
+          unsubscribeInvitations();
+        };
+      } catch (error) {
+        console.error("Error setting up notification listener:", error);
+      }
+    };
 
-      let unseenNotifications = 0;
-      let unseenInvitations = 0;
-
-      const unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
-        unseenNotifications = snapshot.size;
-        setTotalUnseenCount(unseenNotifications + unseenInvitations);
-      });
-
-      const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
-        unseenInvitations = snapshot.size;
-        setTotalUnseenCount(unseenNotifications + unseenInvitations);
-      });
-
-      return () => {
-        unsubscribeNotifications();
-        unsubscribeInvitations();
-      };
-    }, (error) => {
-      console.error("Error fetching user data for notifications:", error);
-    });
+    const unsubscribe = setupNotificationListener();
 
     return () => {
-      unsubscribeUser();
+      unsubscribe.then(unsub => unsub && unsub());
     };
   }, [db, user]);
 

@@ -12,10 +12,9 @@ import { app } from '@/lib/firebase';
 import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
 
-const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
+const SWIPE_THRESHOLD = 50;
 const showLogoutDialogEvent = new Event('show-logout-dialog');
 
-// Helper untuk mengelola state dialog untuk tombol kembali
 const dialogState = {
   isOpen: false,
   close: () => {},
@@ -24,7 +23,6 @@ const dialogState = {
 export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolean) => void) {
   useEffect(() => {
     if (isOpen) {
-      // Dialog terbuka, dorong state baru ke riwayat
       window.history.pushState({ dialogOpen: true }, '');
 
       dialogState.isOpen = true;
@@ -33,7 +31,6 @@ export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolea
       const handlePopState = (event: PopStateEvent) => {
         if (dialogState.isOpen) {
           dialogState.close();
-          // Mencegah navigasi kembali lebih lanjut
           event.preventDefault();
         }
       };
@@ -45,7 +42,6 @@ export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolea
         dialogState.isOpen = false;
       };
     } else if (dialogState.isOpen) {
-        // Dialog ditutup secara manual, kembali satu langkah di riwayat
         if (window.history.state?.dialogOpen) {
           window.history.back();
         }
@@ -66,33 +62,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
   
-  const authRequiredRoutes = ['/', '/calls', '/notifications', '/profile'];
-  const isAuthRequired = authRequiredRoutes.some(route => pathname.startsWith(route));
   const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthRequired = !isAuthPage;
   const isGroupChatPage = pathname.startsWith('/calls/') && pathname.split('/').length > 2;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      if (!currentUser && isAuthRequired) {
-        router.push('/login');
-      }
-      if(currentUser && isAuthPage){
-        router.push('/');
-      }
     });
-
     return () => unsubscribe();
-  }, [auth, router, isAuthRequired, isAuthPage]);
+  }, [auth]);
 
-  // Handle custom back button logic
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user && isAuthRequired) {
+      router.push('/login');
+    }
+    if (user && isAuthPage) {
+      router.push('/');
+    }
+  }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
+
+
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      // Hentikan perilaku default browser agar kita bisa mengontrol sepenuhnya
       event.preventDefault();
 
-      // 1. Prioritaskan menutup dialog yang terbuka
       if (dialogState.isOpen) {
         dialogState.close();
         return;
@@ -101,20 +98,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const currentPath = window.location.pathname;
       const nonHomePages = ['/calls', '/notifications', '/profile'];
       
-      // 2. Jika di halaman profil, notif, atau panggilan, kembali ke beranda
       if (nonHomePages.includes(currentPath)) {
         router.push('/');
         return;
       }
       
-      // 3. Jika di halaman beranda, tampilkan dialog keluar
       if (currentPath === '/') {
          window.dispatchEvent(showLogoutDialogEvent);
          return;
       }
       
-      // 4. Perilaku default untuk halaman lain (seperti halaman grup chat)
-      // Jika tidak ada kondisi di atas yang terpenuhi, lakukan navigasi kembali standar.
       router.back();
     };
 
@@ -177,12 +170,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user && isAuthRequired) {
+  if ((!user && isAuthRequired)) {
     return <CustomLoader />;
   }
-
-  if (isAuthPage) {
-    return <>{children}</>;
+  
+  if (user && isAuthPage) {
+     return <CustomLoader />;
   }
 
 
@@ -196,7 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className={cn("flex-1 overflow-y-auto", { "p-4 sm:p-6 lg:p-8": !isGroupChatPage }, "animate-in fade-in-50")}>
         {children}
       </main>
-      {!isGroupChatPage && <SidebarNav />}
+      {user && !isGroupChatPage && <SidebarNav />}
     </div>
   );
 }
