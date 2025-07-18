@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.voicelink.app',
-  appName: 'VoiceLink',
+  appId: 'com.kitas.app',
+  appName: "Kita's",
   webDir: 'out',
   bundledWebRuntime: false
 };

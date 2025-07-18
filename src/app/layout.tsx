@@ -6,8 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "VoiceLink",
-  description: "A modern audio communication app with a neumorphic design.",
+  title: "Kita's",
+  description: "A modern audio communication app for everyone.",
 };
 
 export default function RootLayout({
