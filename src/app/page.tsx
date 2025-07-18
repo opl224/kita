@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
@@ -69,6 +69,7 @@ export default function Home() {
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
+  const [myTotalLikes, setMyTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
 
@@ -110,6 +111,7 @@ export default function Home() {
       setUserData(null);
       setAllUsers([]);
       setTotalCollected(0);
+      setMyTotalLikes(0);
       return;
     }
 
@@ -125,6 +127,17 @@ export default function Home() {
       if (docSnap.exists()) {
         setTotalCollected(docSnap.data().totalMoneyCollected || 0);
       }
+    });
+    
+    // Listener for user's own total likes
+    const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
+    const unsubscribeUserLikes = onSnapshot(userPostsQuery, (postsSnapshot) => {
+      let totalLikesCount = 0;
+      postsSnapshot.forEach(postDoc => {
+        const post = postDoc.data();
+        totalLikesCount += (post.likes || []).length;
+      });
+      setMyTotalLikes(totalLikesCount);
     });
 
     let unsubscribeAllUsers: (() => void) | undefined;
@@ -174,6 +187,7 @@ export default function Home() {
     return () => {
       unsubscribeUser();
       unsubscribeAppState();
+      unsubscribeUserLikes();
       if (unsubscribeAllUsers) unsubscribeAllUsers();
       if (unsubscribePosts) unsubscribePosts();
     };
@@ -268,6 +282,19 @@ export default function Home() {
                       <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
                       <span className="text-3xl font-bold text-foreground">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+            </Card>
+            <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
+                <div className="flex items-center justify-between gap-4 text-red-500">
+                  <div className="flex items-center gap-4">
+                    <Heart className="h-8 w-8" />
+                    <div className="flex flex-col">
+                      <span className="text-sm text-muted-foreground">Total Suka Diterima</span>
+                      <span className="text-3xl font-bold text-foreground">
+                        {myTotalLikes}
                       </span>
                     </div>
                   </div>
@@ -372,5 +399,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
