@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 
 const signupFormSchema = z.object({
-  displayName: z.string().min(4, "Nama pengguna minimal 4 karakter."),
+  displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
   email: z.string().email("Format email tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter."),
   confirmPassword: z.string().min(8, "Kata sandi minimal 8 karakter."),
@@ -155,5 +155,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
