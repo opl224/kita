@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, X, Plus } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { Upload, X, Plus, Heart } from 'lucide-react';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { CustomLoader } from '@/components/layout/loader';
 import { useDialogBackButton } from '@/components/layout/app-shell';
+import { cn } from '@/lib/utils';
 
 type Post = {
   id: string;
@@ -27,6 +28,7 @@ type Post = {
   imageUrl: string;
   caption: string;
   createdAt: any;
+  likes: string[];
 };
 
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
@@ -74,7 +76,6 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
     setIsSubmitting(true);
 
     try {
-      // 1. Get user data for post
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
 
@@ -82,14 +83,14 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
           throw new Error("User data not found");
       }
 
-      // 2. Create post document in Firestore with Base64 image
       await addDoc(collection(db, 'posts'), {
         userId: user.uid,
         userName: userData.displayName,
         userAvatar: userData.avatarUrl,
-        imageUrl: base64Image, // Store the Base64 string directly
+        imageUrl: base64Image,
         caption: caption,
         createdAt: serverTimestamp(),
+        likes: [],
       });
       
       toast({ title: 'Postingan berhasil dibuat!' });
@@ -227,6 +228,27 @@ export default function PostPage() {
 
     return () => unsubscribe();
   }, [db]);
+  
+  const handleLike = async (postId: string) => {
+      if (!user) return;
+      const postRef = doc(db, 'posts', postId);
+      const postDoc = await getDoc(postRef);
+
+      if (postDoc.exists()) {
+          const postData = postDoc.data() as Post;
+          if (postData.likes.includes(user.uid)) {
+              // Unlike
+              await updateDoc(postRef, {
+                  likes: arrayRemove(user.uid)
+              });
+          } else {
+              // Like
+              await updateDoc(postRef, {
+                  likes: arrayUnion(user.uid)
+              });
+          }
+      }
+  };
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
@@ -246,38 +268,61 @@ export default function PostPage() {
                 <p className="text-muted-foreground">Jadilah yang pertama membagikan momen!</p>
             </Card>
         ) : (
-          posts.map(post => (
-            <Card key={post.id} className={neumorphicCardStyle}>
-              <CardHeader className="flex flex-row items-center gap-3 p-4">
-                <Avatar className="h-10 w-10 border-2 border-background">
-                  <AvatarImage src={post.userAvatar} />
-                  <AvatarFallback>{post.userName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="font-semibold">{post.userName}</p>
-                    <p className="text-xs text-muted-foreground">
-                         {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
-                    </p>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {post.caption && <p className="px-4 pb-3 text-sm">{post.caption}</p>}
-                 <div className="relative aspect-square w-full bg-muted">
-                    <Image
-                      src={post.imageUrl}
-                      alt={`Postingan oleh ${post.userName}`}
-                      layout="fill"
-                      objectFit="cover"
-                      unoptimized
-                    />
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          posts.map(post => {
+            const isLiked = user ? post.likes.includes(user.uid) : false;
+            return (
+                <Card key={post.id} className={neumorphicCardStyle}>
+                  <CardHeader className="flex flex-row items-center gap-3 p-4">
+                    <Avatar className="h-10 w-10 border-2 border-background">
+                      <AvatarImage src={post.userAvatar} />
+                      <AvatarFallback>{post.userName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold">{post.userName}</p>
+                        <p className="text-xs text-muted-foreground">
+                             {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
+                        </p>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {post.caption && <p className="px-4 pb-3 text-sm">{post.caption}</p>}
+                     <div className="relative aspect-square w-full bg-muted">
+                        <Image
+                          src={post.imageUrl}
+                          alt={`Postingan oleh ${post.userName}`}
+                          layout="fill"
+                          objectFit="cover"
+                          unoptimized
+                        />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="p-4">
+                      <div className="flex items-center gap-2">
+                          <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleLike(post.id)}
+                              className={cn(
+                                  "rounded-full h-10 w-10 transition-all",
+                                  isLiked && "text-red-500 hover:text-red-600 active:scale-90"
+                              )}
+                          >
+                              <Heart className={cn("h-6 w-6", isLiked && "fill-current")} />
+                          </Button>
+                          <span className="text-sm font-medium text-muted-foreground">
+                              {post.likes.length} suka
+                          </span>
+                      </div>
+                  </CardFooter>
+                </Card>
+            )
+          })
         )}
       </main>
       
-      <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
+      {user && <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />}
     </div>
   );
 }
+
+    
