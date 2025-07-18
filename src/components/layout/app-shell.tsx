@@ -46,7 +46,9 @@ export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolea
       };
     } else if (dialogState.isOpen) {
         // Dialog ditutup secara manual, kembali satu langkah di riwayat
-        window.history.back();
+        if (window.history.state?.dialogOpen) {
+          window.history.back();
+        }
         dialogState.isOpen = false;
     }
   }, [isOpen, onOpenChange]);
@@ -65,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = getAuth(app);
   
   const authRequiredRoutes = ['/', '/calls', '/notifications', '/profile'];
-  const isAuthRequired = authRequiredRoutes.some(route => pathname.startsWith(route)) && pathname !== '/calls' ? pathname === '/' || pathname === '/notifications' || pathname === '/profile' : authRequiredRoutes.includes(pathname);
+  const isAuthRequired = authRequiredRoutes.some(route => pathname.startsWith(route));
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isGroupChatPage = pathname.startsWith('/calls/') && pathname.split('/').length > 2;
 
