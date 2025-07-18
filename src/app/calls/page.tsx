@@ -100,22 +100,25 @@ export default function VoiceNoteGroupsPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
   const router = useRouter();
-  const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
    useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
-            setIsSuperUser(currentUser.uid === superUserUid);
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                setIsSuperUser(!!userDocSnap.data().isSuperUser);
+            }
         } else {
             setUser(null);
             setIsSuperUser(false);
-            setLoading(false); // If no user, stop loading
         }
+        setLoading(false); // If no user, stop loading
     });
 
     return () => unsubscribeAuth();
-  }, [auth]);
+  }, [auth, db]);
 
   useEffect(() => {
     if (!user) {

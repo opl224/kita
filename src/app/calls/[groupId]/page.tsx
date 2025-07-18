@@ -165,7 +165,6 @@ export default function GroupChatPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
     const customLocale: Locale = {
         ...id,
@@ -205,17 +204,22 @@ export default function GroupChatPage() {
 
 
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (!currentUser) {
                 router.push('/login');
                 return;
             }
             setUser(currentUser);
-            setIsSuperUser(currentUser.uid === superUserUid);
+            
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                setIsSuperUser(!!userDocSnap.data().isSuperUser);
+            }
         });
 
         return () => unsubscribeAuth();
-    }, [auth, router]);
+    }, [auth, router, db]);
 
     useEffect(() => {
         if (!user || !groupId) return;

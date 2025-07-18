@@ -40,6 +40,7 @@ export default function SignupPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
+  const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -60,8 +61,8 @@ export default function SignupPage() {
       await updateProfile(user, {
         displayName: data.displayName,
       });
-      
-      await setDoc(doc(db, "users", user.uid), {
+
+      const userDocData: any = {
         uid: user.uid,
         displayName: data.displayName,
         email: user.email,
@@ -70,7 +71,13 @@ export default function SignupPage() {
         lastSeenNotifications: new Date(0),
         lastSeenCalls: new Date(0),
         hasGivenFeedback: false,
-      });
+      };
+
+      if (user.uid === superUserUid) {
+        userDocData.isSuperUser = true;
+      }
+      
+      await setDoc(doc(db, "users", user.uid), userDocData);
       
       toast({
         title: "Pendaftaran Berhasil!",
