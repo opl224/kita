@@ -196,10 +196,10 @@ export default function Home() {
                               </div>
                               <Button 
                                 size="icon" 
-                                className="rounded-full w-10 h-10 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
+                                className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
                                 onClick={() => setEditingUser(u)}
                               >
-                                  <Plus className="h-5 w-5 text-primary" />
+                                  <Plus className="h-5 w-5 text-primary-foreground" />
                               </Button>
                           </div>
                       ))}
