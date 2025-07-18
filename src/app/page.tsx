@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -141,8 +141,6 @@ export default function Home() {
                 setUserData(data);
                 const userIsAdmin = !!data.isSuperUser;
                 setIsSuperUser(userIsAdmin);
-
-                 // This ensures the main admin user is always a super user
                  if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2" && !data.isSuperUser) {
                     await updateDoc(userDocRef, { isSuperUser: true });
                  }
@@ -293,6 +291,10 @@ export default function Home() {
 
   const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
 
+  async function handleLogout() {
+    setIsLogoutDialogOpen(true);
+  }
+
   if (loading) {
     return <CustomLoader />;
   }
@@ -387,54 +389,60 @@ export default function Home() {
                 <CardContent className="p-0">
                     <div className="space-y-4">
                         {paginatedUsers.map((u) => (
-                            <div key={u.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset cursor-pointer" onClick={() => setViewingUser(u)}>
-                                <Avatar className="h-10 w-10 border-none rounded-full pointer-events-none">
-                                    <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
-                                    <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 pointer-events-none">
-                                    <p className="font-semibold text-foreground">{u.displayName}</p>
-                                    <p className="text-sm text-muted-foreground">{u.email}</p>
+                            <div key={u.id} className="flex items-center gap-2 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                                <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => setViewingUser(u)}>
+                                    <Avatar className="h-10 w-10 border-none rounded-full pointer-events-none">
+                                        <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
+                                        <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 pointer-events-none">
+                                        <p className="font-semibold text-foreground">{u.displayName}</p>
+                                        <p className="text-sm text-muted-foreground">{u.email}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-red-500 mr-2 pointer-events-none">
+                                        <Heart className="h-4 w-4" />
+                                        <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-red-500 mr-2 pointer-events-none">
-                                  <Heart className="h-4 w-4" />
-                                  <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
+                                
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
+                                        <DialogTrigger asChild>
+                                            <Button 
+                                                size="icon" 
+                                                className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
+                                                onClick={() => {
+                                                    setEditingUser(u);
+                                                }}
+                                            >
+                                                <Plus className="h-5 w-5 text-primary-foreground" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
+                                            </DialogHeader>
+                                            <Form {...form}>
+                                                <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="amount"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Jumlah (IDR)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <Button type="submit" className="w-full">Tambah</Button>
+                                                </form>
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
                                 </div>
-                                <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
-                                  <Button 
-                                    size="icon" 
-                                    className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-10"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingUser(u);
-                                    }}
-                                  >
-                                      <Plus className="h-5 w-5 text-primary-foreground" />
-                                  </Button>
-                                  <DialogContent>
-                                      <DialogHeader>
-                                      <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
-                                      </DialogHeader>
-                                      <Form {...form}>
-                                      <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
-                                          <FormField
-                                          control={form.control}
-                                          name="amount"
-                                          render={({ field }) => (
-                                              <FormItem>
-                                              <FormLabel>Jumlah (IDR)</FormLabel>
-                                              <FormControl>
-                                                  <Input type="number" {...field} />
-                                              </FormControl>
-                                              <FormMessage />
-                                              </FormItem>
-                                          )}
-                                          />
-                                          <Button type="submit" className="w-full">Tambah</Button>
-                                      </form>
-                                      </Form>
-                                  </DialogContent>
-                                </Dialog>
                             </div>
                         ))}
                     </div>
@@ -541,3 +549,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
