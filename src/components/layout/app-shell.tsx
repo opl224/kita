@@ -45,6 +45,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [auth, router, isAuthRequired, isAuthPage]);
 
+  // Handle Android back button
+  useEffect(() => {
+    const handlePopState = () => {
+      // This forces a back navigation via the router when the browser's back button is used.
+      router.back();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [router]);
+
+
   const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
