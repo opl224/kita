@@ -120,7 +120,7 @@ export function SidebarNav() {
     if (lastSeen.notifications === null) return;
     
     const newGeneralCount = generalNotifications.filter(n => n.createdAt.toDate() > lastSeen.notifications!).length;
-    const newInvitationCount = invitations.length;
+    const newInvitationCount = invitations.length; // Invitations are always "new" until actioned
     
     setNewGeneralNotificationsCount(newGeneralCount + newInvitationCount);
 
@@ -130,11 +130,9 @@ export function SidebarNav() {
   useEffect(() => {
     if (!user || lastSeen.calls === null) return;
     
-    // If on the calls page, reset the count and timestamp immediately
+    // If on the calls page, force count to 0 immediately
     if (pathname.startsWith('/calls')) {
         setNewCallNotificationsCount(0);
-        const userDocRef = doc(db, 'users', user.uid);
-        updateDoc(userDocRef, { lastSeenCalls: serverTimestamp() }).catch(err => {});
         return;
     }
 

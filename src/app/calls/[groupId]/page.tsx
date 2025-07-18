@@ -212,6 +212,12 @@ export default function GroupChatPage() {
             setUser(currentUser);
             
             const userDocRef = doc(db, 'users', currentUser.uid);
+
+            // Mark calls as seen when entering the page
+            updateDoc(userDocRef, {
+              lastSeenCalls: serverTimestamp()
+            }).catch(err => console.error("Error updating last seen for calls:", err));
+            
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
                 setIsSuperUser(!!userDocSnap.data().isSuperUser);
