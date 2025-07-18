@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, TouchEvent, useEffect, useCallback } from 'react';
+import React, { useState, TouchEvent, useEffect, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Smartphone } from 'lucide-react';
@@ -11,6 +11,7 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
+import { useToast } from '@/hooks/use-toast';
 
 const SWIPE_THRESHOLD = 50;
 const showLogoutDialogEvent = new Event('show-logout-dialog');
@@ -61,6 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
+  const { toast } = useToast();
+  const backPressCountRef = useRef(0);
   
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isAuthRequired = !isAuthPage;
@@ -86,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
 
 
-   useEffect(() => {
+  useEffect(() => {
     // We add a state to the history to be able to catch the back button event.
     window.history.pushState({ custom: true }, '');
 
@@ -101,7 +104,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        window.dispatchEvent(showLogoutDialogEvent);
+        backPressCountRef.current += 1;
+
+        if (backPressCountRef.current === 1) {
+            toast({
+                description: "Tekan sekali lagi untuk keluar.",
+                duration: 2000,
+            });
+
+            setTimeout(() => {
+                backPressCountRef.current = 0;
+            }, 2000); // Reset counter after 2 seconds
+        } else if (backPressCountRef.current === 2) {
+            window.dispatchEvent(showLogoutDialogEvent);
+            backPressCountRef.current = 0; // Reset after triggering
+        }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -109,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [router]);
+  }, [router, toast]);
 
 
   const handleTouchStart = (e: TouchEvent) => {
