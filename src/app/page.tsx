@@ -99,18 +99,19 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
         router.push('/login');
+        setLoading(false);
       }
     });
 
     return () => unsubscribeAuth();
   }, [auth, router]);
 
-  // General data fetching for all users
+  // Combined useEffect for all data fetching logic
   useEffect(() => {
     if (!user) {
         setLoading(false);
@@ -122,85 +123,78 @@ export default function Home() {
 
     // Listener for the current user's data
     const userDocRef = doc(db, "users", user.uid);
-    unsubscribes.push(onSnapshot(userDocRef, (docSnap) => {
+    const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
             setUserData(data);
-            setIsSuperUser(!!data.isSuperUser);
+            const userIsAdmin = !!data.isSuperUser;
+            setIsSuperUser(userIsAdmin);
+
+            // If user is admin, setup admin listeners
+            if (userIsAdmin) {
+                // Listener for all users data and their posts to calculate likes
+                const usersQuery = query(collection(db, "users"));
+                const allUsersUnsubscribe = onSnapshot(usersQuery, async (usersSnapshot) => {
+                    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    const postsQuery = query(collection(db, "posts"));
+                    const postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
+                        const likesCountByUser: { [userId: string]: number } = {};
+                        postsSnapshot.forEach(postDoc => {
+                            const post = postDoc.data();
+                            const postOwnerId = post.userId;
+                            const likesCount = (post.likes || []).length;
+                            likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
+                        });
+
+                        const usersWithLikes = usersList.map(u => ({
+                            ...u,
+                            totalLikes: likesCountByUser[u.id] || 0
+                        }));
+                        setAllUsers(usersWithLikes);
+
+                        const feedbackList = usersList
+                            .filter(u => u.hasGivenFeedback === true && u.feedback)
+                            .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
+                        setUserFeedbacks(feedbackList);
+                    });
+                    unsubscribes.push(postsUnsubscribe);
+                });
+                 unsubscribes.push(allUsersUnsubscribe);
+            } else {
+                setAllUsers([]);
+                setUserFeedbacks([]);
+            }
         }
         setLoading(false);
-    }));
+    });
+    unsubscribes.push(userUnsubscribe);
 
     // Listener for global app state (total money)
     const appStateRef = doc(db, "appState", "main");
-    unsubscribes.push(onSnapshot(appStateRef, (docSnap) => {
+    const appStateUnsubscribe = onSnapshot(appStateRef, (docSnap) => {
         if (docSnap.exists()) {
             setTotalCollected(docSnap.data().totalMoneyCollected || 0);
         }
-    }));
+    });
+    unsubscribes.push(appStateUnsubscribe);
 
     // Listener for the current user's total likes
     const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
-    unsubscribes.push(onSnapshot(userPostsQuery, (postsSnapshot) => {
+    const userPostsUnsubscribe = onSnapshot(userPostsQuery, (postsSnapshot) => {
         let totalLikesCount = 0;
         postsSnapshot.forEach(postDoc => {
             const post = postDoc.data();
             totalLikesCount += (post.likes || []).length;
         });
         setMyTotalLikes(totalLikesCount);
-    }));
+    });
+    unsubscribes.push(userPostsUnsubscribe);
 
     return () => {
         unsubscribes.forEach(unsub => unsub());
     };
   }, [user, db]);
-
-  // Admin-specific data fetching
-  useEffect(() => {
-    if (!isSuperUser) {
-        setAllUsers([]);
-        setUserFeedbacks([]);
-        return;
-    }
-
-    const unsubscribes: (() => void)[] = [];
-
-    // Listener for all users data and their posts to calculate likes
-    const usersCollection = collection(db, "users");
-    const postsCollection = collection(db, "posts");
-
-    const usersQuery = query(usersCollection);
-    unsubscribes.push(onSnapshot(usersQuery, (usersSnapshot) => {
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        const postsQuery = query(postsCollection);
-        const unsubscribePosts = onSnapshot(postsQuery, (postsSnapshot) => {
-            const likesCountByUser: { [userId: string]: number } = {};
-            postsSnapshot.forEach(postDoc => {
-                const post = postDoc.data();
-                const postOwnerId = post.userId;
-                const likesCount = (post.likes || []).length;
-                likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
-            });
-
-            const usersWithLikes = usersList.map(u => ({
-                ...u,
-                totalLikes: likesCountByUser[u.id] || 0
-            }));
-            setAllUsers(usersWithLikes);
-
-            const feedbackList = usersList
-              .filter(u => u.hasGivenFeedback === true && u.feedback)
-              .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
-            setUserFeedbacks(feedbackList);
-        });
-        unsubscribes.push(unsubscribePosts);
-    }));
-
-    return () => {
-        unsubscribes.forEach(unsub => unsub());
-    };
-  }, [isSuperUser, db]);
 
 
   const handleAddMoney = async (data: MoneyFormValues) => {
@@ -443,3 +437,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
