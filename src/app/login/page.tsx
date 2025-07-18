@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from 'next/link';
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase";
@@ -14,7 +15,6 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { VoiceLinkLogo } from "@/components/icons/voicelink-logo";
 
 const loginFormSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -63,11 +63,10 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <Card className={neumorphicCardStyle}>
             <div className="flex flex-col items-center gap-4 mb-8">
-                <VoiceLinkLogo className="h-16 w-16 text-primary"/>
+                <Image src="/logo.png" alt="VoiceLink Logo" width={64} height={64} />
                 <h1 className="text-3xl font-headline font-bold text-foreground">
                     Masuk ke VoiceLink
                 </h1>
-                <p className="text-muted-foreground text-center">Masukkan detail Anda untuk melanjutkan.</p>
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

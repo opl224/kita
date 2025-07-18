@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Camera, LogOut, Loader, Moon, Sun } from "lucide-react";
 
 const profileFormSchema = z.object({
-  displayName: z.string().min(2, "Nama tampilan minimal 2 karakter."),
+  displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
   email: z.string().email("Format email tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter.").optional().or(z.literal('')),
   confirmPassword: z.string().min(8, "Kata sandi minimal 8 karakter.").optional().or(z.literal('')),
@@ -226,9 +226,9 @@ export default function ProfilePage() {
                 name="displayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground">Nama Tampilan</FormLabel>
+                    <FormLabel className="text-muted-foreground">Nama Pengguna</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nama tampilan Anda" {...field} className={neumorphicInputStyle} />
+                      <Input placeholder="Nama pengguna" {...field} className={neumorphicInputStyle} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

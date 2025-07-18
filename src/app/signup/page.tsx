@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -16,10 +17,9 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { VoiceLinkLogo } from "@/components/icons/voicelink-logo";
 
 const signupFormSchema = z.object({
-  displayName: z.string().min(2, "Nama tampilan minimal 2 karakter."),
+  displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
   email: z.string().email("Format email tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter."),
   confirmPassword: z.string().min(8, "Kata sandi minimal 8 karakter."),
@@ -93,11 +93,10 @@ export default function SignupPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <Card className={neumorphicCardStyle}>
             <div className="flex flex-col items-center gap-4 mb-8">
-                <VoiceLinkLogo className="h-16 w-16 text-primary"/>
+                <Image src="/logo.png" alt="VoiceLink Logo" width={64} height={64} />
                 <h1 className="text-3xl font-headline font-bold text-foreground">
                     Buat Akun VoiceLink
                 </h1>
-                <p className="text-muted-foreground text-center">Isi detail di bawah untuk memulai.</p>
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -106,9 +105,9 @@ export default function SignupPage() {
                     name="displayName"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-muted-foreground">Nama Tampilan</FormLabel>
+                        <FormLabel className="text-muted-foreground">Nama Pengguna</FormLabel>
                         <FormControl>
-                            <Input placeholder="Nama tampilan Anda" {...field} className={neumorphicInputStyle} />
+                            <Input placeholder="Nama pengguna" {...field} className={neumorphicInputStyle} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
