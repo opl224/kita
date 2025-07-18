@@ -232,15 +232,6 @@ export default function VoiceNoteGroupsPage() {
         <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Pesan Suara Grup
         </h1>
-        {isSuperUser && (
-             <Button
-              className="shadow-neumorphic-outset active:shadow-neumorphic-inset"
-              onClick={() => setIsCreateGroupOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Buat Grup
-            </Button>
-        )}
       </header>
 
       <main className="space-y-6 pb-24">
@@ -320,6 +311,17 @@ export default function VoiceNoteGroupsPage() {
         ))}
       </main>
 
+      {isSuperUser && (
+        <Button
+            size="icon"
+            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+            onClick={() => setIsCreateGroupOpen(true)}
+        >
+            <Plus className="h-8 w-8" />
+            <span className="sr-only">Buat Grup Baru</span>
+        </Button>
+      )}
+
        <CreateEditGroupDialog 
          open={isCreateGroupOpen || !!editingGroup}
          onOpenChange={(isOpen) => {
@@ -334,5 +336,3 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
-
-    
