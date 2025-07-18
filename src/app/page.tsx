@@ -3,10 +3,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { DollarSign, Users, Plus, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -21,19 +21,11 @@ import { useDialogBackButton } from "@/components/layout/app-shell";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 
-
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
 });
 
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
-
-type Feedback = {
-  id: string;
-  displayName: string;
-  avatarUrl: string;
-  feedback: 'like' | 'dislike';
-};
 
 const ITEMS_PER_PAGE = 5;
 
@@ -76,21 +68,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
-  const [totalLikes, setTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
 
-  // Pagination states
   const [allUsersPage, setAllUsersPage] = useState(1);
-  const [feedbackPage, setFeedbackPage] = useState(1);
   
-  // State for Avatar Dialog
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
 
-  // State for Logout Dialog
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const auth = getAuth(app);
@@ -123,9 +109,7 @@ export default function Home() {
     if (!user) {
       setUserData(null);
       setAllUsers([]);
-      setUserFeedback([]);
       setTotalCollected(0);
-      setTotalLikes(0);
       return;
     }
 
@@ -145,41 +129,46 @@ export default function Home() {
 
     let unsubscribeAllUsers: (() => void) | undefined;
     let unsubscribePosts: (() => void) | undefined;
+    
     if (isSuperUser) {
         const usersCollection = collection(db, "users");
-        unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAllUsers(usersList);
-
-            const feedbackList = usersList.filter(u => u.hasGivenFeedback && u.feedback).map(u => ({
-              id: u.id,
-              displayName: u.displayName,
-              avatarUrl: u.avatarUrl,
-              feedback: u.feedback
-            }));
-            setUserFeedback(feedbackList);
-        }, (error) => {
-            console.error("Error fetching all users (ensure rules permit this for super-user):", error);
-        });
-
         const postsCollection = collection(db, "posts");
-        unsubscribePosts = onSnapshot(postsCollection, (postsSnapshot) => {
-            let likesCount = 0;
-            postsSnapshot.forEach(doc => {
-                const post = doc.data();
-                if (post.likes && Array.isArray(post.likes)) {
-                    likesCount += post.likes.length;
+
+        const fetchUsersAndLikes = () => {
+          const usersUnsub = onSnapshot(usersCollection, (usersSnapshot) => {
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const postsUnsub = onSnapshot(postsCollection, (postsSnapshot) => {
+              const likesCountByUser: { [userId: string]: number } = {};
+              
+              postsSnapshot.forEach(postDoc => {
+                const post = postDoc.data();
+                const postOwnerId = post.userId;
+                const likesCount = (post.likes || []).length;
+                
+                if (likesCountByUser[postOwnerId]) {
+                  likesCountByUser[postOwnerId] += likesCount;
+                } else {
+                  likesCountByUser[postOwnerId] = likesCount;
                 }
+              });
+
+              const usersWithLikes = usersList.map(u => ({
+                ...u,
+                totalLikes: likesCountByUser[u.id] || 0
+              }));
+
+              setAllUsers(usersWithLikes);
             });
-            setTotalLikes(likesCount);
-        }, (error) => {
-             console.error("Error fetching posts for likes count:", error);
-        });
+            unsubscribePosts = postsUnsub; // Store this unsubscriber
+          });
+          unsubscribeAllUsers = usersUnsub; // Store this unsubscriber
+        };
+        
+        fetchUsersAndLikes();
 
     } else {
         setAllUsers([]);
-        setUserFeedback([]);
-        setTotalLikes(0);
     }
 
     return () => {
@@ -237,12 +226,8 @@ export default function Home() {
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
 
-  // Pagination logic
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
-
-  const totalFeedbackPages = Math.ceil(userFeedback.length / ITEMS_PER_PAGE);
-  const paginatedFeedback = userFeedback.slice((feedbackPage - 1) * ITEMS_PER_PAGE, feedbackPage * ITEMS_PER_PAGE);
   
   if (loading) {
     return <CustomLoader />;
@@ -288,21 +273,6 @@ export default function Home() {
                   </div>
                 </div>
             </Card>
-            {isSuperUser && (
-                 <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
-                    <div className="flex items-center justify-between gap-4 text-red-500">
-                        <div className="flex items-center gap-4">
-                            <Heart className="h-8 w-8" />
-                            <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">Total Suka</span>
-                                <span className="text-3xl font-bold text-foreground">
-                                    {totalLikes.toLocaleString('id-ID')}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-            )}
         </div>
 
 
@@ -327,6 +297,10 @@ export default function Home() {
                               <div className="flex-1">
                                   <p className="font-semibold text-foreground">{u.displayName}</p>
                                   <p className="text-sm text-muted-foreground">{u.email}</p>
+                              </div>
+                              <div className="flex items-center gap-2 text-red-500 mr-2">
+                                <Heart className="h-4 w-4" />
+                                <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
                               </div>
                               <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
                                 <DialogTrigger asChild>
@@ -375,42 +349,6 @@ export default function Home() {
                   />
               </CardContent>
             </Card>
-
-            <Card className={`${neumorphicCardStyle} p-6`}>
-                <CardHeader className="p-0 mb-4">
-                    <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
-                        <MessageSquareQuote className="h-6 w-6"/>
-                        Penilaian Pengguna
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="space-y-4">
-                        {paginatedFeedback.length > 0 ? paginatedFeedback.map((fb) => (
-                            <div key={fb.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
-                                <Avatar className="h-10 w-10 border-none rounded-full">
-                                    <AvatarImage src={fb.avatarUrl} alt={fb.displayName} className="rounded-full" />
-                                    <AvatarFallback className="rounded-full">{fb.displayName?.charAt(0) || '?'}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-foreground">{fb.displayName}</p>
-                                </div>
-                                {fb.feedback === 'like' ? (
-                                    <ThumbsUp className="h-6 w-6 text-green-500" />
-                                ) : (
-                                    <ThumbsDown className="h-6 w-6 text-red-500" />
-                                )}
-                            </div>
-                        )) : (
-                            <p className="text-muted-foreground text-center py-4">Belum ada penilaian.</p>
-                        )}
-                    </div>
-                     <PaginationControls 
-                        currentPage={feedbackPage}
-                        totalPages={totalFeedbackPages}
-                        onPageChange={setFeedbackPage}
-                    />
-                </CardContent>
-            </Card>
             </>
           )}
         </aside>
@@ -434,3 +372,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
