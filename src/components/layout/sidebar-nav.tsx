@@ -14,7 +14,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 
 export const menuItems = [
   { href: '/', label: 'Beranda', icon: Home, notificationKey: '' },
-  { href: '/calls', label: 'Panggilan', icon: Voicemail, notificationKey: 'calls' },
+  { href: '/calls', label: 'VN', icon: Voicemail, notificationKey: 'calls' },
   { href: '/notifications', label: 'Notifikasi', icon: Bell, notificationKey: 'notifications' },
   { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
