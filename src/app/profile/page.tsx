@@ -174,7 +174,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
-      <header className="flex justify-between items-center">
+      <header className="sticky top-0 z-10 flex justify-between items-center bg-background py-4">
         <div>
           <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
             Profil Saya
@@ -213,7 +213,7 @@ export default function ProfilePage() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
               >
-                  {isUploading ? <Loader className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5"/>}
+                  {isUploading ? <CustomLoader /> : <Camera className="h-5 w-5"/>}
                   <span className="sr-only">Ubah Avatar</span>
               </Button>
             </div>
