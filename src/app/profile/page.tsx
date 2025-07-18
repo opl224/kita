@@ -18,8 +18,17 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, LogOut, Loader, Moon, Sun } from "lucide-react";
+import { Camera, LogOut, Loader, Moon, Sun, ThumbsUp, ThumbsDown } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 2 karakter."),
@@ -47,6 +56,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
@@ -73,6 +83,11 @@ export default function ProfilePage() {
             email: userData.email,
           });
           setAvatarUrl(userData.avatarUrl);
+          
+          if (userData.hasGivenFeedback === false) {
+             setShowFeedbackDialog(true);
+          }
+
         }
       } else {
         router.push('/login');
@@ -124,6 +139,28 @@ export default function ProfilePage() {
         setIsUploading(false);
     };
   };
+
+  async function handleFeedback(feedback: 'like' | 'dislike') {
+    if (!user) return;
+    try {
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, {
+            feedback: feedback,
+            hasGivenFeedback: true
+        });
+        setShowFeedbackDialog(false);
+        toast({
+            title: "Terima Kasih!",
+            description: "Penilaian Anda sangat berarti bagi kami.",
+        });
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
+        toast({
+            title: "Gagal Memberikan Penilaian",
+            variant: "destructive",
+        });
+    }
+  }
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) return;
@@ -182,16 +219,18 @@ export default function ProfilePage() {
 
       <div className="flex flex-col gap-6">
         <Card className={`${neumorphicCardStyle} relative`}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="absolute top-4 right-4 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
-            >
-              <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
+            <div className="fixed top-4 right-4 z-10">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
+                    >
+                    <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <span className="sr-only">Toggle theme</span>
+                </Button>
+            </div>
           <div className="flex flex-col items-center gap-4 mb-8 pt-8">
             <div className="relative">
               <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
@@ -286,6 +325,35 @@ export default function ProfilePage() {
             Keluar
         </Button>
       </div>
+
+       <AlertDialog open={showFeedbackDialog}>
+            <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="text-center text-xl font-headline">Bagaimana Pengalaman Anda?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-center text-muted-foreground">
+                        Penilaian Anda membantu kami meningkatkan aplikasi ini.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => handleFeedback('like')}
+                    >
+                        <ThumbsUp className="h-10 w-10 text-green-500" />
+                    </Button>
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => handleFeedback('dislike')}
+                    >
+                        <ThumbsDown className="h-10 w-10 text-red-500" />
+                    </Button>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

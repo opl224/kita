@@ -3,10 +3,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus } from "lucide-react";
+import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -25,14 +27,24 @@ const moneyFormSchema = z.object({
 
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
 
+type Feedback = {
+  id: string;
+  displayName: string;
+  avatarUrl: string;
+  feedback: 'like' | 'dislike';
+};
+
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const { theme, setTheme } = useTheme();
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -60,14 +72,19 @@ export default function Home() {
           setUserData(data);
         }
 
-        const usersCollection = collection(db, "users");
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
         if (isOpank) {
+          const usersCollection = collection(db, "users");
+          const usersSnapshot = await getDocs(usersCollection);
+          const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllUsers(usersList);
+          
           const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
           setTotalCollected(total);
+
+          const feedbackQuery = query(collection(db, "users"), where("hasGivenFeedback", "==", true));
+          const feedbackSnapshot = await getDocs(feedbackQuery);
+          const feedbackList = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback));
+          setUserFeedback(feedbackList);
         }
 
       }
@@ -137,25 +154,37 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
-      <header className="flex justify-between items-center">
+      <header className="flex justify-between items-center relative">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
           <h1 className="text-3xl font-headline font-bold text-foreground">
             {userData?.displayName || 'Pengguna'} {isSuperUser && "👑"}
           </h1>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-             <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none rounded-full">
-              <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover rounded-full" />
-              <AvatarFallback className="rounded-full">{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-          </DialogTrigger>
-          <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
-             <DialogTitle className="sr-only">Avatar Pengguna diperbesar</DialogTitle>
-             <img src={userData?.avatarUrl} alt="Avatar Pengguna diperbesar" className="max-h-[80vh] w-auto rounded-lg" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
+            >
+              <Sun className="h-6 w-6 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none rounded-full">
+                  <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover rounded-full" />
+                  <AvatarFallback className="rounded-full">{userData?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+              </DialogTrigger>
+              <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
+                <DialogTitle className="sr-only">Avatar Pengguna diperbesar</DialogTitle>
+                <img src={userData?.avatarUrl} alt="Avatar Pengguna diperbesar" className="max-h-[80vh] w-auto rounded-lg" />
+              </DialogContent>
+            </Dialog>
+        </div>
       </header>
       
       <main className="flex flex-col gap-8">
@@ -177,6 +206,7 @@ export default function Home() {
 
         <aside className="flex flex-col gap-8">
            {isSuperUser && (
+            <>
             <Card className={`${neumorphicCardStyle} p-6`}>
               <CardHeader className="p-0 mb-4">
                   <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
@@ -208,6 +238,38 @@ export default function Home() {
                   </div>
               </CardContent>
             </Card>
+
+            <Card className={`${neumorphicCardStyle} p-6`}>
+                <CardHeader className="p-0 mb-4">
+                    <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
+                        <MessageSquareQuote className="h-6 w-6"/>
+                        Penilaian Pengguna
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="space-y-4">
+                        {userFeedback.length > 0 ? userFeedback.map((fb) => (
+                            <div key={fb.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                                <Avatar className="h-10 w-10 border-none rounded-full">
+                                    <AvatarImage src={fb.avatarUrl} alt={fb.displayName} className="rounded-full" />
+                                    <AvatarFallback className="rounded-full">{fb.displayName?.charAt(0) || '?'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <p className="font-semibold text-foreground">{fb.displayName}</p>
+                                </div>
+                                {fb.feedback === 'like' ? (
+                                    <ThumbsUp className="h-6 w-6 text-green-500" />
+                                ) : (
+                                    <ThumbsDown className="h-6 w-6 text-red-500" />
+                                )}
+                            </div>
+                        )) : (
+                            <p className="text-muted-foreground text-center py-4">Belum ada penilaian.</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+            </>
           )}
         </aside>
       </main>
@@ -243,5 +305,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

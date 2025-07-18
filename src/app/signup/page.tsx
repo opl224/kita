@@ -69,6 +69,7 @@ export default function SignupPage() {
         moneyCollected: 0,
         avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`,
         lastSeenNotifications: new Date(0),
+        hasGivenFeedback: false,
       });
 
       toast({
