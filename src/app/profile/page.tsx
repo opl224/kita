@@ -21,6 +21,7 @@ import { Camera, Moon, Sun, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
 import {
   AlertDialog,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -42,36 +43,48 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+type UserProfileData = {
+    displayName: string;
+    email: string;
+    avatarUrl: string;
+    hasGivenFeedback?: boolean;
+    feedback?: 'like' | 'dislike';
+};
+
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
-function FeedbackDialog({ open, onOpenChange, onFeedbackSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, onFeedbackSubmit: (feedback: 'like' | 'dislike') => void }) {
-    useDialogBackButton(open, onOpenChange);
+function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackSubmit: (feedback: 'like' | 'dislike' | 'cancel') => void }) {
+    useDialogBackButton(open, () => onFeedbackSubmit('cancel'));
 
     return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialog open={open}>
             <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
+                    <AlertDialogDescription className="text-center">Bagaimana pengalaman Anda menggunakan aplikasi ini?</AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => onFeedbackSubmit('like')}
-                    >
-                        <ThumbsUp className="h-10 w-10 text-green-500" />
-                    </Button>
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => onFeedbackSubmit('dislike')}
-                    >
-                        <ThumbsDown className="h-10 w-10 text-red-500" />
-                    </Button>
+                <AlertDialogFooter className="flex-col sm:flex-col sm:space-x-0 items-center justify-center gap-4 pt-4">
+                     <div className="flex flex-row items-center justify-center gap-8">
+                        <Button 
+                            size="icon" 
+                            variant="ghost"
+                            className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                            onClick={() => onFeedbackSubmit('like')}
+                        >
+                            <ThumbsUp className="h-10 w-10 text-green-500" />
+                        </Button>
+                        <Button 
+                            size="icon" 
+                            variant="ghost"
+                            className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                            onClick={() => onFeedbackSubmit('dislike')}
+                        >
+                            <ThumbsDown className="h-10 w-10 text-red-500" />
+                        </Button>
+                    </div>
+                     <AlertDialogCancel onClick={() => onFeedbackSubmit('cancel')} className="w-full mt-4">Nanti Saja</AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -85,13 +98,11 @@ export default function ProfilePage() {
   const db = getFirestore(app);
   const { theme, setTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // State for Info Dialog
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   useDialogBackButton(isInfoDialogOpen, setIsInfoDialogOpen);
 
@@ -110,8 +121,6 @@ export default function ProfilePage() {
     const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         router.push('/login');
-        setLoading(false);
-        setUser(null);
         return;
       }
       
@@ -120,30 +129,22 @@ export default function ProfilePage() {
       const userDocRef = doc(db, "users", currentUser.uid);
       const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
-          const userData = docSnap.data();
+          const data = docSnap.data() as UserProfileData;
+          setUserData(data);
           form.reset({
-            displayName: userData.displayName || '',
-            email: userData.email || '',
+            displayName: data.displayName || '',
+            email: data.email || '',
             password: '',
             confirmPassword: '',
           });
-          setAvatarUrl(userData.avatarUrl || '');
-
-          if (userData.hasGivenFeedback === false) {
-             setShowFeedbackDialog(true);
-          } else if (userData.hasGivenFeedback === true) {
-             setShowFeedbackDialog(false);
-          }
         }
         setLoading(false);
       }, (error) => {
-        console.error("Error fetching user data with onSnapshot:", error);
+        console.error("Error fetching user data:", error);
         setLoading(false);
       });
 
-      return () => {
-        userUnsubscribe();
-      };
+      return () => userUnsubscribe();
     });
 
     return () => authUnsubscribe();
@@ -166,7 +167,6 @@ export default function ProfilePage() {
             await updateDoc(userDocRef, {
                 avatarUrl: base64data
             });
-            setAvatarUrl(base64data);
         } catch (error) {
             console.error("Error uploading avatar: ", error);
         } finally {
@@ -179,15 +179,18 @@ export default function ProfilePage() {
     };
   };
 
-  async function handleFeedback(feedback: 'like' | 'dislike') {
+  async function handleFeedback(feedback: 'like' | 'dislike' | 'cancel') {
     if (!user) return;
     try {
         const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-            feedback: feedback,
-            hasGivenFeedback: true
-        });
-        setShowFeedbackDialog(false);
+        if (feedback === 'cancel') {
+            await updateDoc(userDocRef, { hasGivenFeedback: true });
+        } else {
+             await updateDoc(userDocRef, {
+                feedback: feedback,
+                hasGivenFeedback: true
+            });
+        }
     } catch (error) {
         console.error("Error submitting feedback:", error);
     }
@@ -219,7 +222,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) {
+  if (loading || !userData) {
     return <CustomLoader />;
   }
 
@@ -276,8 +279,8 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-4 mb-8 pt-8">
             <div className="relative">
               <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
-                <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
-                <AvatarFallback className="rounded-full">{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarImage src={userData.avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
+                <AvatarFallback className="rounded-full">{userData.displayName?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
               <input 
                   type="file" 
@@ -296,7 +299,7 @@ export default function ProfilePage() {
                   <span className="sr-only">Ubah Avatar</span>
               </Button>
             </div>
-            <h2 className="text-2xl font-headline font-semibold text-foreground">{form.getValues('displayName')}</h2>
+            <h2 className="text-2xl font-headline font-semibold text-foreground">{userData.displayName}</h2>
           </div>
 
           <Form {...form}>
@@ -368,11 +371,9 @@ export default function ProfilePage() {
       </div>
 
        <FeedbackDialog 
-         open={showFeedbackDialog}
-         onOpenChange={setShowFeedbackDialog}
+         open={userData.hasGivenFeedback === false}
          onFeedbackSubmit={handleFeedback}
        />
     </div>
   );
-
-    
+}
