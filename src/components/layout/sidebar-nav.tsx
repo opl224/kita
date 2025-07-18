@@ -41,51 +41,48 @@ export function SidebarNav() {
       return;
     }
 
-    const setupListeners = async () => {
-        try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (!userDocSnap.exists()) return;
-            const userData = userDocSnap.data();
+    // Listener for new group invitations
+    const invitationsQuery = query(
+      collection(db, 'invitations'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+    const unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
+        setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
+    });
+    
+    // Combined listener for user data and group data to check for new calls
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
+      if (!userDocSnap.exists()) return;
+      const userData = userDocSnap.data();
+      const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
 
-            // Listener for new group invitations
-            const invitationsQuery = query(
-              collection(db, 'invitations'),
-              where('userId', '==', user.uid),
-              where('status', '==', 'pending')
-            );
-            const unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
-              setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
-            });
+      const groupsQuery = query(
+        collection(db, 'groups'),
+        where('members', 'array-contains', user.uid)
+      );
 
-            // Listener for new group messages - simplified query
-            const groupsQuery = query(
-              collection(db, 'groups'),
-              where('members', 'array-contains', user.uid)
-            );
-            const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
-               const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
-               const newMessagesCount = snapshot.docs.filter(doc => {
-                 const groupData = doc.data();
-                 const lastMessageTime = groupData.lastMessageTime?.toDate();
-                 return lastMessageTime && lastMessageTime > lastSeenCalls;
-               }).length;
-               setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
-            });
+      const unsubscribeGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
+        let newMessagesCount = 0;
+        groupsSnapshot.forEach(groupDoc => {
+          const groupData = groupDoc.data();
+          const lastMessageTime = groupData.lastMessageTime?.toDate();
+          if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+            newMessagesCount++;
+          }
+        });
+        setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
+      });
+      
+      // Return a cleanup function for the inner listener
+      return () => unsubscribeGroups();
+    });
 
-            return () => {
-              unsubscribeInvites();
-              unsubscribeGroups();
-            };
-        } catch (error) {
-            console.error("Error setting up notification listeners:", error);
-        }
-    };
-
-    const unsubscribePromise = setupListeners();
 
     return () => {
-      unsubscribePromise?.then(unsub => unsub && unsub());
+      unsubscribeInvites();
+      unsubscribeUser();
     };
   }, [db, user]);
 
@@ -100,7 +97,7 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const notificationKey = item.notificationKey as keyof typeof notificationCounts;
-            const hasNotification = notificationKey && notificationCounts[notificationKey] > 0 && pathname !== item.href;
+            const hasNotification = notificationKey && notificationCounts[notificationKey] > 0;
 
             return (
               <Tooltip key={item.href}>

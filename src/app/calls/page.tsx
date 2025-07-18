@@ -168,6 +168,12 @@ export default function VoiceNoteGroupsPage() {
                 ...group,
                 members: (group.members || []).map((memberId: string) => usersData[memberId]).filter(Boolean),
             }));
+             // Sort groups by lastMessageTime on the client-side
+            populatedGroups.sort((a, b) => {
+                const timeA = a.lastMessageTime?.toDate() || new Date(0);
+                const timeB = b.lastMessageTime?.toDate() || new Date(0);
+                return timeB.getTime() - timeA.getTime();
+            });
             setGroups(populatedGroups);
         } else {
             setGroups(groupList);
