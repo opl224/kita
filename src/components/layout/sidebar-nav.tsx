@@ -7,7 +7,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -52,38 +52,43 @@ export function SidebarNav() {
     });
     
     // Listener for new voice notes in groups (calls)
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
-      if (!userDocSnap.exists()) return;
-      
-      const userData = userDocSnap.data();
-      const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
-
+    // Only run this listener if we are NOT on the calls page.
+    let unsubscribeGroups: () => void = () => {};
+    if (pathname !== '/calls') {
+      const userDocRef = doc(db, 'users', user.uid);
       const groupsQuery = query(
         collection(db, 'groups'),
         where('members', 'array-contains', user.uid)
       );
 
-      const unsubscribeGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
-        let newMessagesCount = 0;
-        groupsSnapshot.forEach(groupDoc => {
-          const groupData = groupDoc.data();
-          const lastMessageTime = groupData.lastMessageTime?.toDate();
-          if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
-            newMessagesCount++;
-          }
-        });
-        setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
+      unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
+        try {
+            const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
+            if (userDocSnap.empty) return;
+            
+            const userData = userDocSnap.docs[0].data();
+            const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
+
+            let newMessagesCount = 0;
+            groupsSnapshot.forEach(groupDoc => {
+                const groupData = groupDoc.data();
+                const lastMessageTime = groupData.lastMessageTime?.toDate();
+                if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+                    newMessagesCount++;
+                }
+            });
+            setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
+        } catch (error) {
+            console.error("Error fetching user data for notification count:", error);
+        }
       });
-      
-      return () => unsubscribeGroups();
-    });
+    }
 
     return () => {
       unsubscribeInvites();
-      unsubscribeUser();
+      unsubscribeGroups();
     };
-  }, [db, user]);
+  }, [db, user, pathname]); // Add pathname here
 
   // Effect to clear call notifications when on the /calls page
   useEffect(() => {

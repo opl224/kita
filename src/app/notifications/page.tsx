@@ -198,7 +198,12 @@ export default function NotificationsPage() {
                                    <div className="flex-1">
                                        <p className="text-foreground">{notif.message}</p>
                                        <p className="text-xs text-muted-foreground mt-1">
-                                           {notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
+                                           {notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: false, locale: id })
+                                           .replace('kurang dari ', '')
+                                           .replace('sekitar ', '')
+                                           .replace('pada ', '')
+                                           .replace('yang lalu ', '')
+                                           : 'baru saja'}
                                        </p>
                                    </div>
                                 </div>

@@ -547,7 +547,12 @@ const startRecording = async () => {
                                     </Card>
                                     <div className="flex items-center gap-2 mt-1 px-1">
                                         <p className="text-xs text-muted-foreground">
-                                            {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true, locale: customLocale }) : ''}
+                                            {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: false, locale: customLocale }) 
+                                            .replace('kurang dari ', '')
+                                            .replace('sekitar ', '')
+                                            .replace('pada ', '')
+                                            .replace('yang lalu ', '')
+                                            : ''}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             {formatTime(msg.duration || 0)}

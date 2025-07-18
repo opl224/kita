@@ -303,7 +303,11 @@ export default function VoiceNoteGroupsPage() {
                   <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
                   <span className="text-xs shrink-0">
                     {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
-                        ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: true, locale: id })
+                        ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: false, locale: id })
+                        .replace('kurang dari ', '')
+                        .replace('sekitar ', '')
+                        .replace('pada ', '')
+                        .replace('yang lalu ', '')
                         : group.lastMessageTime || ""}
                   </span>
               </div>
