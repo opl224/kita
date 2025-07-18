@@ -121,6 +121,15 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+          <Button
+            size="icon"
+            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+          >
+            <Plus className="h-8 w-8" />
+            <span className="sr-only">Buat Postingan Baru</span>
+          </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-[90vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Buat Postingan Baru</DialogTitle>
@@ -230,7 +239,7 @@ export default function PostPage() {
     <div className="flex flex-col gap-8 animate-in fade-in-50">
       <header>
         <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-          Postingan Kita's
+          Feed Kita's
         </h1>
       </header>
 
@@ -273,17 +282,6 @@ export default function PostPage() {
             </Card>
           ))
         )}
-
-        <DialogTrigger asChild>
-            <Button
-              onClick={() => setIsCreatePostOpen(true)}
-              size="icon"
-              className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-            >
-              <Plus className="h-8 w-8" />
-              <span className="sr-only">Buat Postingan Baru</span>
-            </Button>
-        </DialogTrigger>
       </main>
       
       <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
