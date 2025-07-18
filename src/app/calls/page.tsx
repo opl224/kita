@@ -4,7 +4,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil } from "lucide-react";
+import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, writeBatch, updateDoc } from "firebase/firestore";
@@ -73,13 +73,14 @@ export default function VoiceNoteGroupsPage() {
 
    useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
         if (currentUser) {
+            setUser(currentUser);
             setIsSuperUser(currentUser.uid === superUserUid);
         } else {
+            setUser(null);
             setIsSuperUser(false);
+            setLoading(false); // If no user, stop loading
         }
-        setLoading(false);
     });
 
     return () => unsubscribeAuth();
@@ -88,9 +89,13 @@ export default function VoiceNoteGroupsPage() {
   useEffect(() => {
     if (!user) {
         setGroups([]);
+        if (auth.currentUser === null) { // Only set loading false if auth state is determined
+          setLoading(false);
+        }
         return;
     }
     
+    setLoading(true);
     const groupsCollection = collection(db, 'groups');
     const q = query(
       groupsCollection, 
@@ -129,6 +134,7 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setGroups(groupList);
         }
+        setLoading(false);
     }, (error) => {
       console.error("Error fetching groups:", error);
       toast({
@@ -136,6 +142,7 @@ export default function VoiceNoteGroupsPage() {
         description: "Terjadi kesalahan perizinan saat mengambil data. Pastikan aturan keamanan Anda benar.",
         variant: "destructive"
       });
+      setLoading(false);
     });
 
     return () => unsubscribeGroups();
@@ -212,7 +219,7 @@ export default function VoiceNoteGroupsPage() {
 
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Memuat...</div>
+    return <div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
 
   return (
