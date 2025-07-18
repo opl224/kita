@@ -77,7 +77,7 @@ export default function LoginPage() {
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Email</FormLabel>
                     <FormControl>
-                        <Input placeholder="Email Anda" {...field} className={neumorphicInputStyle} />
+                        <Input type="email" placeholder="Email Anda" {...field} className={neumorphicInputStyle} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

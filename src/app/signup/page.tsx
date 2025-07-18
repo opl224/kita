@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
+import { useState } from "react";
 
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 const signupFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
@@ -41,6 +43,8 @@ export default function SignupPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -121,7 +125,7 @@ export default function SignupPage() {
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Email</FormLabel>
                     <FormControl>
-                        <Input placeholder="Email Anda" {...field} className={neumorphicInputStyle} />
+                        <Input type="email" placeholder="Email Anda" {...field} className={neumorphicInputStyle} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -133,9 +137,20 @@ export default function SignupPage() {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Kata Sandi</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-12 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -146,9 +161,20 @@ export default function SignupPage() {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Konfirmasi Kata Sandi</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
-                    </FormControl>
+                     <div className="relative">
+                        <FormControl>
+                            <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-12 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                            {showConfirmPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                     </FormItem>
                 )}

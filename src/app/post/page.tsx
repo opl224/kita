@@ -135,7 +135,6 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
          <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
             <DialogHeader>
               <DialogTitle>Buat Postingan Baru</DialogTitle>
-              <DialogDescription>Bagikan momen Anda dengan pengguna lain.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <Textarea
