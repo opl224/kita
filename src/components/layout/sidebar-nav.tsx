@@ -7,7 +7,7 @@ import { Home, AudioWaveform, Bell, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -41,51 +41,80 @@ export function SidebarNav() {
     if (!user) {
       return;
     }
-
-    // Listener for new group invitations (notifications)
-    const invitationsQuery = query(
-      collection(db, 'invitations'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-    const unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
-        setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
-    });
-    
-    // Listener for new voice notes in groups (calls)
-    let unsubscribeGroups: () => void = () => {};
-    
-    const groupsQuery = query(
-      collection(db, 'groups'),
-      where('members', 'array-contains', user.uid)
-    );
-    
-    unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
+  
+    let unsubscribeInvites = () => {};
+    let unsubscribeNotifications = () => {};
+    let unsubscribeGroups = () => {};
+  
+    const setupListeners = async () => {
       try {
-          const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
-          if (userDocSnap.empty) return;
-          
-          const userData = userDocSnap.docs[0].data();
-          const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) return;
+        
+        const userData = userDocSnap.data();
+        const lastSeenNotifications = userData.lastSeenNotifications?.toDate() || new Date(0);
+        const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
 
+        // Listener for new group invitations
+        const invitationsQuery = query(
+          collection(db, 'invitations'),
+          where('userId', '==', user.uid),
+          where('status', '==', 'pending')
+        );
+
+        // Listener for new general notifications
+        const notificationsQuery = query(
+          collection(db, "notifications"),
+          where("createdAt", ">", lastSeenNotifications)
+        );
+
+        let currentInvitesCount = 0;
+        let currentGeneralNotifsCount = 0;
+
+        const updateTotalNotifs = () => {
+            setNotificationCounts(prev => ({ ...prev, notifications: currentInvitesCount + currentGeneralNotifsCount }));
+        };
+
+        unsubscribeInvites = onSnapshot(invitationsQuery, (snapshot) => {
+          currentInvitesCount = snapshot.size;
+          updateTotalNotifs();
+        });
+
+        unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+          currentGeneralNotifsCount = snapshot.size;
+          updateTotalNotifs();
+        });
+  
+        // Listener for new voice notes in groups
+        const groupsQuery = query(
+          collection(db, 'groups'),
+          where('members', 'array-contains', user.uid)
+        );
+  
+        unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
           let newMessagesCount = 0;
           groupsSnapshot.forEach(groupDoc => {
-              const groupData = groupDoc.data();
-              const lastMessageTime = groupData.lastMessageTime?.toDate();
-              if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
-                  if (pathname !== '/calls') {
-                    newMessagesCount++;
-                  }
+            const groupData = groupDoc.data();
+            const lastMessageTime = groupData.lastMessageTime?.toDate();
+            if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+              if (pathname !== '/calls') {
+                newMessagesCount++;
               }
+            }
           });
           setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
+        });
       } catch (error) {
-          console.error("Error fetching user data for notification count:", error);
+        console.error("Error setting up notification listeners:", error);
       }
-    });
-
+    };
+  
+    setupListeners();
+  
     return () => {
       unsubscribeInvites();
+      unsubscribeNotifications();
       unsubscribeGroups();
     };
   }, [db, user, pathname]);
@@ -98,7 +127,6 @@ export function SidebarNav() {
               lastSeenCalls: serverTimestamp()
           }).catch(err => console.error("Error updating last seen calls timestamp:", err));
           
-          // Instantly clear the notification dot in the UI
           setNotificationCounts(prev => ({ ...prev, calls: 0 }));
       }
   }, [pathname, user, db]);
