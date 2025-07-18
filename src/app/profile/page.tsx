@@ -234,12 +234,13 @@ export default function ProfilePage() {
                             <DialogTitle className="text-xl font-headline">Informasi Aplikasi</DialogTitle>
                         </DialogHeader>
                         <div className="text-sm space-y-3 text-foreground">
-                          <p>Aplikasi ini dibuat tidak tau tujuannya apa cuma iseng aja.</p>
-                            <br />
-                          <strong>Teknologi yang digunakan</strong>
-                          <p>Framework Nextjs, Tailwind CSS dan ShadCN UI dan juga menggunakan Bahasa Pemrograman TypeScript dan Javascript</p>
-                            <strong>Desain dan Tulisan</strong>
-                            <p>Menggunakan gaya <strong>Neumorphic</strong> dan tulisan standar Poppins</p>
+                        <p className="text-center">Aplikasi ini dibuat tidak tau tujuannya apa cuma iseng aja.</p>
+                          <br/>
+                        <strong>Teknologi yang digunakan</strong>
+                        <p>Framework Nextjs, Tailwind CSS dan ShadCN UI dan juga menggunakan Bahasa Pemrograman TypeScript dan Javascript.</p>
+                          <br/>
+                        <strong>Desain dan Tulisan</strong>
+                        <p>Menggunakan gaya <strong>Neumorphism</strong> dan tulisan standar Poppins.</p>
                         </div>
                     </DialogContent>
                 </Dialog>
