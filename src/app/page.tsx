@@ -118,7 +118,12 @@ export default function Home() {
     const userDocRef = doc(db, "users", user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setUserData(docSnap.data());
+        const data = docSnap.data();
+        setUserData(data);
+        // Check for superuser status from the document itself
+        if (data.isSuperUser) {
+          setIsSuperUser(true);
+        }
       }
     });
 
@@ -140,58 +145,57 @@ export default function Home() {
       setMyTotalLikes(totalLikesCount);
     });
 
-    let unsubscribeAllUsers: (() => void) | undefined;
-    let unsubscribePosts: (() => void) | undefined;
-    
-    if (isSuperUser) {
-        const usersCollection = collection(db, "users");
-        const postsCollection = collection(db, "posts");
-
-        const fetchUsersAndLikes = () => {
-          const usersUnsub = onSnapshot(usersCollection, (usersSnapshot) => {
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const postsUnsub = onSnapshot(postsCollection, (postsSnapshot) => {
-              const likesCountByUser: { [userId: string]: number } = {};
-              
-              postsSnapshot.forEach(postDoc => {
-                const post = postDoc.data();
-                const postOwnerId = post.userId;
-                const likesCount = (post.likes || []).length;
-                
-                if (likesCountByUser[postOwnerId]) {
-                  likesCountByUser[postOwnerId] += likesCount;
-                } else {
-                  likesCountByUser[postOwnerId] = likesCount;
-                }
-              });
-
-              const usersWithLikes = usersList.map(u => ({
-                ...u,
-                totalLikes: likesCountByUser[u.id] || 0
-              }));
-
-              setAllUsers(usersWithLikes);
-            });
-            unsubscribePosts = postsUnsub; // Store this unsubscriber
-          });
-          unsubscribeAllUsers = usersUnsub; // Store this unsubscriber
-        };
-        
-        fetchUsersAndLikes();
-
-    } else {
-        setAllUsers([]);
-    }
-
     return () => {
       unsubscribeUser();
       unsubscribeAppState();
       unsubscribeUserLikes();
-      if (unsubscribeAllUsers) unsubscribeAllUsers();
-      if (unsubscribePosts) unsubscribePosts();
     };
-  }, [user, isSuperUser, db]);
+  }, [user, db]);
+
+  // Separate effect for admin-only data fetching
+  useEffect(() => {
+    if (!isSuperUser) {
+      setAllUsers([]);
+      return;
+    }
+
+    const usersCollection = collection(db, "users");
+    const postsCollection = collection(db, "posts");
+
+    const unsubscribeUsers = onSnapshot(usersCollection, (usersSnapshot) => {
+      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const unsubscribePosts = onSnapshot(postsCollection, (postsSnapshot) => {
+        const likesCountByUser: { [userId: string]: number } = {};
+        
+        postsSnapshot.forEach(postDoc => {
+          const post = postDoc.data();
+          const postOwnerId = post.userId;
+          const likesCount = (post.likes || []).length;
+          
+          if (likesCountByUser[postOwnerId]) {
+            likesCountByUser[postOwnerId] += likesCount;
+          } else {
+            likesCountByUser[postOwnerId] = likesCount;
+          }
+        });
+
+        const usersWithLikes = usersList.map(u => ({
+          ...u,
+          totalLikes: likesCountByUser[u.id] || 0
+        }));
+
+        setAllUsers(usersWithLikes);
+      });
+
+      // Cleanup posts listener when users change
+      return () => unsubscribePosts();
+    });
+
+    // Cleanup users listener on component unmount or when no longer admin
+    return () => unsubscribeUsers();
+
+  }, [isSuperUser, db]);
 
 
   const handleAddMoney = async (data: MoneyFormValues) => {
