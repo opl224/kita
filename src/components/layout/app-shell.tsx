@@ -86,26 +86,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
 
 
-  useEffect(() => {
+   useEffect(() => {
+    // We add a state to the history to be able to catch the back button event.
+    window.history.pushState({ custom: true }, '');
+
     const handlePopState = (event: PopStateEvent) => {
-      event.preventDefault();
+        event.preventDefault();
+        
+        // Push the state again to keep catching the back button
+        window.history.pushState({ custom: true }, '');
 
-      if (dialogState.isOpen) {
-        dialogState.close();
-        return;
-      }
+        if (dialogState.isOpen) {
+            dialogState.close();
+            return;
+        }
 
-      const currentPath = window.location.pathname;
-      
-      if (currentPath !== '/') {
-        router.push('/');
-        return;
-      }
-      
-      if (currentPath === '/') {
-         window.dispatchEvent(showLogoutDialogEvent);
-         return;
-      }
+        window.dispatchEvent(showLogoutDialogEvent);
     };
 
     window.addEventListener('popstate', handlePopState);
