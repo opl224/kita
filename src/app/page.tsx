@@ -17,6 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
+import { useDialogBackButton } from "@/components/layout/app-shell";
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -41,6 +42,11 @@ export default function Home() {
   const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
+  
+  // State for Avatar Dialog
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
+
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -176,7 +182,7 @@ export default function Home() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-            <Dialog>
+            <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
               <DialogTrigger asChild>
                 <Avatar className="h-16 w-16 shadow-neumorphic-outset cursor-pointer border-none rounded-full">
                   <AvatarImage src={userData?.avatarUrl} alt="Avatar Pengguna" data-ai-hint="user avatar" className="object-cover rounded-full" />
