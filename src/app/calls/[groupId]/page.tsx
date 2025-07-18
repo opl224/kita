@@ -146,14 +146,13 @@ export default function GroupChatPage() {
     const db = getFirestore(app);
     const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
-    // Custom locale for date-fns to remove "kurang dari" and "yang lalu"
     const customLocale: Locale = {
         ...id,
         formatDistance: (token, count, options) => {
             const formatDistanceLocale = {
                 lessThanXSeconds: 'baru saja',
                 xSeconds: '{{count}} detik',
-                halfAMinute: 'setengah menit',
+                halfAMinute: '30 detik',
                 lessThanXMinutes: 'baru saja',
                 xMinutes: '{{count}} menit',
                 aboutXHours: '{{count}} jam',
@@ -170,10 +169,6 @@ export default function GroupChatPage() {
             };
     
             const result = formatDistanceLocale[token as keyof typeof formatDistanceLocale]?.replace('{{count}}', count.toString()) ?? '';
-    
-            if (options?.addSuffix) {
-                 return result;
-            }
     
             return result;
         },
