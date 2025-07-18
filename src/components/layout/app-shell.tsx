@@ -89,10 +89,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Handle custom back button logic
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // Hentikan perilaku default browser agar kita bisa mengontrol sepenuhnya
+      event.preventDefault();
+
       // 1. Prioritaskan menutup dialog yang terbuka
       if (dialogState.isOpen) {
         dialogState.close();
-        event.preventDefault();
         return;
       }
 
@@ -101,20 +103,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       
       // 2. Jika di halaman profil, notif, atau panggilan, kembali ke beranda
       if (nonHomePages.includes(currentPath)) {
-        event.preventDefault();
         router.push('/');
         return;
       }
       
       // 3. Jika di halaman beranda, tampilkan dialog keluar
       if (currentPath === '/') {
-         event.preventDefault();
          window.dispatchEvent(showLogoutDialogEvent);
          return;
       }
       
       // 4. Perilaku default untuk halaman lain (seperti halaman grup chat)
-      // Biarkan browser menangani navigasi kembali
+      // Jika tidak ada kondisi di atas yang terpenuhi, lakukan navigasi kembali standar.
+      router.back();
     };
 
     window.addEventListener('popstate', handlePopState);
