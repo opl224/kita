@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 
 
@@ -38,7 +38,6 @@ export default function SignupPage() {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -59,18 +58,12 @@ export default function SignupPage() {
       await updateProfile(user, {
         displayName: data.displayName,
       });
-
-      // Get super user's moneyCollected value to sync with new user
-      const superUserDocRef = doc(db, "users", superUserUid);
-      const superUserDocSnap = await getDoc(superUserDocRef);
-      const initialMoneyCollected = superUserDocSnap.exists() ? superUserDocSnap.data().moneyCollected : 0;
-
+      
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         displayName: data.displayName,
         email: user.email,
         createdAt: serverTimestamp(),
-        moneyCollected: initialMoneyCollected,
         avatarUrl: `https://placehold.co/100x100.png?text=${data.displayName.charAt(0)}`,
         lastSeenNotifications: new Date(0),
         hasGivenFeedback: false,
@@ -162,3 +155,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

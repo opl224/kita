@@ -59,35 +59,47 @@ export default function Home() {
       if (currentUser) {
         const isOpank = currentUser.uid === superUserUid;
         setIsSuperUser(isOpank);
-        
+
+        // Fetch user-specific data
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             setUserData(docSnap.data());
           }
-          setLoading(false);
         });
 
+        // Listen to the central app state for total money collected
+        const appStateRef = doc(db, "appState", "main");
+        const unsubscribeAppState = onSnapshot(appStateRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setTotalCollected(docSnap.data().totalMoneyCollected || 0);
+          }
+        });
+
+        // If super user, listen for all users and their feedback
         if (isOpank) {
           const usersCollection = collection(db, "users");
           const unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
             const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllUsers(usersList);
-            
-            const total = usersList.reduce((sum, u) => sum + (u.moneyCollected || 0), 0);
-            setTotalCollected(total);
 
             const feedbackList = usersList.filter(u => u.hasGivenFeedback).map(u => u as Feedback);
             setUserFeedback(feedbackList);
           });
           
+          setLoading(false);
           return () => {
             unsubscribeUser();
             unsubscribeAllUsers();
+            unsubscribeAppState();
           };
         }
-
-        return () => unsubscribeUser();
+        
+        setLoading(false);
+        return () => {
+          unsubscribeUser();
+          unsubscribeAppState();
+        };
 
       } else {
         setLoading(false);
@@ -98,21 +110,23 @@ export default function Home() {
   }, [auth, db]);
 
   const handleAddMoney = async (data: MoneyFormValues) => {
-    if (!user || !editingUser) return;
+    if (!user || !editingUser || !isSuperUser) return;
     
-    const userToUpdateRef = doc(db, "users", editingUser.id);
+    const appStateRef = doc(db, "appState", "main");
     const amountToAdd = data.amount;
 
     try {
       await runTransaction(db, async (transaction) => {
-        const userToUpdateDoc = await transaction.get(userToUpdateRef);
-        if (!userToUpdateDoc.exists()) {
-          throw "Pengguna tidak ditemukan!";
+        const appStateDoc = await transaction.get(appStateRef);
+        
+        let newTotal = amountToAdd;
+        if (appStateDoc.exists()) {
+          newTotal = (appStateDoc.data().totalMoneyCollected || 0) + amountToAdd;
         }
+        
+        transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
-        const newMoneyCollected = (userToUpdateDoc.data().moneyCollected || 0) + amountToAdd;
-        transaction.update(userToUpdateRef, { moneyCollected: newMoneyCollected });
-
+        // Create a notification for the record
         const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)} untuk ${editingUser.displayName}`;
         const notificationsCollection = collection(db, "notifications");
         transaction.set(doc(notificationsCollection), {
@@ -172,9 +186,7 @@ export default function Home() {
                 <div className="flex flex-col">
                   <span className="text-sm text-muted-foreground">Uang Terkumpul</span>
                   <span className="text-3xl font-bold text-foreground">
-                      {isSuperUser
-                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)
-                        : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData?.moneyCollected || 0)}
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalCollected)}
                   </span>
                 </div>
               </div>
@@ -208,7 +220,7 @@ export default function Home() {
                                 className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
                                 onClick={() => setEditingUser(u)}
                               >
-                                  <Plus className={cn("h-5 w-5 text-foreground dark:text-primary-foreground")} />
+                                  <Plus className="h-5 w-5 text-primary-foreground" />
                               </Button>
                           </div>
                       ))}
@@ -256,7 +268,7 @@ export default function Home() {
             <DialogHeader>
             <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
             <DialogDescription>
-                Masukkan jumlah uang yang akan ditambahkan.
+                Tindakan ini akan menambah saldo 'Uang Terkumpul' secara global. Notifikasi akan dikirim atas nama {editingUser?.displayName}.
             </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -282,3 +294,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
