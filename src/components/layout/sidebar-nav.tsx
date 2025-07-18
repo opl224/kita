@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Phone, Bell, User } from 'lucide-react';
+import { Home, Voicemail, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
@@ -14,7 +14,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 
 export const menuItems = [
   { href: '/', label: 'Beranda', icon: Home, notificationKey: '' },
-  { href: '/calls', label: 'Panggilan', icon: Phone, notificationKey: 'calls' },
+  { href: '/calls', label: 'Panggilan', icon: Voicemail, notificationKey: 'calls' },
   { href: '/notifications', label: 'Notifikasi', icon: Bell, notificationKey: 'notifications' },
   { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
@@ -52,43 +52,42 @@ export function SidebarNav() {
     });
     
     // Listener for new voice notes in groups (calls)
-    // Only run this listener if we are NOT on the calls page.
     let unsubscribeGroups: () => void = () => {};
-    if (pathname !== '/calls') {
-      const userDocRef = doc(db, 'users', user.uid);
-      const groupsQuery = query(
-        collection(db, 'groups'),
-        where('members', 'array-contains', user.uid)
-      );
+    
+    const groupsQuery = query(
+      collection(db, 'groups'),
+      where('members', 'array-contains', user.uid)
+    );
+    
+    unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
+      try {
+          const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
+          if (userDocSnap.empty) return;
+          
+          const userData = userDocSnap.docs[0].data();
+          const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
 
-      unsubscribeGroups = onSnapshot(groupsQuery, async (groupsSnapshot) => {
-        try {
-            const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
-            if (userDocSnap.empty) return;
-            
-            const userData = userDocSnap.docs[0].data();
-            const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
-
-            let newMessagesCount = 0;
-            groupsSnapshot.forEach(groupDoc => {
-                const groupData = groupDoc.data();
-                const lastMessageTime = groupData.lastMessageTime?.toDate();
-                if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+          let newMessagesCount = 0;
+          groupsSnapshot.forEach(groupDoc => {
+              const groupData = groupDoc.data();
+              const lastMessageTime = groupData.lastMessageTime?.toDate();
+              if (lastMessageTime && lastMessageTime > lastSeenCalls && groupData.lastMessage) {
+                  if (pathname !== '/calls') {
                     newMessagesCount++;
-                }
-            });
-            setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
-        } catch (error) {
-            console.error("Error fetching user data for notification count:", error);
-        }
-      });
-    }
+                  }
+              }
+          });
+          setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
+      } catch (error) {
+          console.error("Error fetching user data for notification count:", error);
+      }
+    });
 
     return () => {
       unsubscribeInvites();
       unsubscribeGroups();
     };
-  }, [db, user, pathname]); // Add pathname here
+  }, [db, user, pathname]);
 
   // Effect to clear call notifications when on the /calls page
   useEffect(() => {
