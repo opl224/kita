@@ -7,7 +7,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -41,7 +41,7 @@ export function SidebarNav() {
       return;
     }
 
-    // Listener for new group invitations
+    // Listener for new group invitations (notifications)
     const invitationsQuery = query(
       collection(db, 'invitations'),
       where('userId', '==', user.uid),
@@ -51,10 +51,11 @@ export function SidebarNav() {
         setNotificationCounts(prev => ({ ...prev, notifications: snapshot.size }));
     });
     
-    // Combined listener for user data and group data to check for new calls
+    // Listener for new voice notes in groups (calls)
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
       if (!userDocSnap.exists()) return;
+      
       const userData = userDocSnap.data();
       const lastSeenCalls = userData.lastSeenCalls?.toDate() || new Date(0);
 
@@ -75,16 +76,28 @@ export function SidebarNav() {
         setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
       });
       
-      // Return a cleanup function for the inner listener
       return () => unsubscribeGroups();
     });
-
 
     return () => {
       unsubscribeInvites();
       unsubscribeUser();
     };
   }, [db, user]);
+
+  // Effect to clear call notifications when on the /calls page
+  useEffect(() => {
+      if (pathname === '/calls' && user) {
+          const userDocRef = doc(db, 'users', user.uid);
+          updateDoc(userDocRef, {
+              lastSeenCalls: serverTimestamp()
+          }).catch(err => console.error("Error updating last seen calls timestamp:", err));
+          
+          // Instantly clear the notification dot in the UI
+          setNotificationCounts(prev => ({ ...prev, calls: 0 }));
+      }
+  }, [pathname, user, db]);
+
 
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
