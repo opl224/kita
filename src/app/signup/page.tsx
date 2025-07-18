@@ -34,13 +34,13 @@ const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset 
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
+const SUPER_USER_UID = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
 export default function SignupPage() {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
-  const superUserUid = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -73,7 +73,7 @@ export default function SignupPage() {
         hasGivenFeedback: false,
       };
 
-      if (user.uid === superUserUid) {
+      if (user.uid === SUPER_USER_UID) {
         userDocData.isSuperUser = true;
       }
       

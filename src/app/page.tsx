@@ -28,6 +28,7 @@ const moneyFormSchema = z.object({
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
 
 const ITEMS_PER_PAGE = 5;
+const SUPER_USER_UID = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
 type UserFeedback = {
   id: string;
@@ -123,48 +124,21 @@ export default function Home() {
 
     // Listener for the current user's data
     const userDocRef = doc(db, "users", user.uid);
-    const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+    const userUnsubscribe = onSnapshot(userDocRef, async (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
+
+            // Ensure super user status is correctly set in Firestore
+            if (user.uid === SUPER_USER_UID && !data.isSuperUser) {
+              await updateDoc(userDocRef, { isSuperUser: true });
+              // The snapshot listener will re-trigger with the updated data.
+              return;
+            }
+
             setUserData(data);
             const userIsAdmin = !!data.isSuperUser;
             setIsSuperUser(userIsAdmin);
 
-            // If user is admin, setup admin listeners
-            if (userIsAdmin) {
-                // Listener for all users data and their posts to calculate likes
-                const usersQuery = query(collection(db, "users"));
-                const allUsersUnsubscribe = onSnapshot(usersQuery, async (usersSnapshot) => {
-                    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                    const postsQuery = query(collection(db, "posts"));
-                    const postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
-                        const likesCountByUser: { [userId: string]: number } = {};
-                        postsSnapshot.forEach(postDoc => {
-                            const post = postDoc.data();
-                            const postOwnerId = post.userId;
-                            const likesCount = (post.likes || []).length;
-                            likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
-                        });
-
-                        const usersWithLikes = usersList.map(u => ({
-                            ...u,
-                            totalLikes: likesCountByUser[u.id] || 0
-                        }));
-                        setAllUsers(usersWithLikes);
-
-                        const feedbackList = usersList
-                            .filter(u => u.hasGivenFeedback === true && u.feedback)
-                            .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
-                        setUserFeedbacks(feedbackList);
-                    });
-                    unsubscribes.push(postsUnsubscribe);
-                });
-                 unsubscribes.push(allUsersUnsubscribe);
-            } else {
-                setAllUsers([]);
-                setUserFeedbacks([]);
-            }
         }
         setLoading(false);
     });
@@ -195,6 +169,50 @@ export default function Home() {
         unsubscribes.forEach(unsub => unsub());
     };
   }, [user, db]);
+
+  // useEffect for admin-only data
+  useEffect(() => {
+    if (!isSuperUser) {
+        setAllUsers([]);
+        setUserFeedbacks([]);
+        return;
+    }
+    
+    // Listener for all users data and their posts to calculate likes
+    const usersQuery = query(collection(db, "users"));
+    const allUsersUnsubscribe = onSnapshot(usersQuery, (usersSnapshot) => {
+        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const postsQuery = query(collection(db, "posts"));
+        const postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
+            const likesCountByUser: { [userId: string]: number } = {};
+            postsSnapshot.forEach(postDoc => {
+                const post = postDoc.data();
+                const postOwnerId = post.userId;
+                const likesCount = (post.likes || []).length;
+                likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
+            });
+
+            const usersWithLikes = usersList.map(u => ({
+                ...u,
+                totalLikes: likesCountByUser[u.id] || 0
+            }));
+            setAllUsers(usersWithLikes);
+
+            const feedbackList = usersList
+                .filter(u => u.hasGivenFeedback === true && u.feedback)
+                .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
+            setUserFeedbacks(feedbackList);
+        });
+
+        // Cleanup posts listener when users listener re-runs
+        return () => postsUnsubscribe();
+    });
+
+    // Cleanup users listener on component unmount or when isSuperUser changes
+    return () => allUsersUnsubscribe();
+    
+  }, [isSuperUser, db]);
 
 
   const handleAddMoney = async (data: MoneyFormValues) => {
