@@ -426,7 +426,7 @@ export default function PostPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Hapus Postingan?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Tindakan ini tidak dapat diurungkan. Postingan Anda akan dihapus secara permanen.
+                        Tindakan ini tidak dapat dibatalkan. Postingan Anda akan dihapus secara permanen.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

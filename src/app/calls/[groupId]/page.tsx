@@ -123,7 +123,7 @@ const AudioPlayer = ({ src, showDelete, onDelete }: { src: string, showDelete: b
                         <AlertDialogHeader>
                             <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat diurungkan.
+                                Apakah Anda yakin ingin menghapus pesan suara ini? Tindakan ini tidak dapat dibatalkan.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
