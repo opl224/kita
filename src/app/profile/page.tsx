@@ -174,12 +174,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
-      <header className="sticky top-0 z-10 flex justify-between items-center bg-background py-4">
-        <div>
-          <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-            Profil Saya
-          </h1>
-        </div>
+      <div className="fixed top-4 right-4 z-20">
         <Button
           variant="ghost"
           size="icon"
@@ -190,6 +185,12 @@ export default function ProfilePage() {
           <Moon className="absolute h-6 w-6 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
+      </div>
+
+      <header className="pt-4">
+        <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+          Profil Saya
+        </h1>
       </header>
 
       <div className="flex flex-col gap-6">
