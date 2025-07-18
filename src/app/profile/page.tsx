@@ -55,8 +55,9 @@ const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset 
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
-function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackSubmit: (feedback: 'like' | 'dislike' | 'cancel') => void }) {
-    useDialogBackButton(open, () => onFeedbackSubmit('cancel'));
+function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackSubmit: (feedback: 'like' | 'dislike') => void }) {
+    // This hook prevents the user from using the back button to escape the dialog
+    useDialogBackButton(open, () => {});
 
     return (
         <AlertDialog open={open}>
@@ -65,26 +66,23 @@ function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackS
                     <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
                     <AlertDialogDescription className="text-center">Bagaimana pengalaman Anda menggunakan aplikasi ini?</AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-col sm:space-x-0 items-center justify-center gap-4 pt-4">
-                     <div className="flex flex-row items-center justify-center gap-8">
-                        <Button 
-                            size="icon" 
-                            variant="ghost"
-                            className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                            onClick={() => onFeedbackSubmit('like')}
-                        >
-                            <ThumbsUp className="h-10 w-10 text-green-500" />
-                        </Button>
-                        <Button 
-                            size="icon" 
-                            variant="ghost"
-                            className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                            onClick={() => onFeedbackSubmit('dislike')}
-                        >
-                            <ThumbsDown className="h-10 w-10 text-red-500" />
-                        </Button>
-                    </div>
-                     <AlertDialogCancel onClick={() => onFeedbackSubmit('cancel')} className="w-full mt-4">Nanti Saja</AlertDialogCancel>
+                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => onFeedbackSubmit('like')}
+                    >
+                        <ThumbsUp className="h-10 w-10 text-green-500" />
+                    </Button>
+                    <Button 
+                        size="icon" 
+                        variant="ghost"
+                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
+                        onClick={() => onFeedbackSubmit('dislike')}
+                    >
+                        <ThumbsDown className="h-10 w-10 text-red-500" />
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -179,18 +177,14 @@ export default function ProfilePage() {
     };
   };
 
-  async function handleFeedback(feedback: 'like' | 'dislike' | 'cancel') {
+  async function handleFeedback(feedback: 'like' | 'dislike') {
     if (!user) return;
     try {
         const userDocRef = doc(db, "users", user.uid);
-        if (feedback === 'cancel') {
-            await updateDoc(userDocRef, { hasGivenFeedback: true });
-        } else {
-             await updateDoc(userDocRef, {
-                feedback: feedback,
-                hasGivenFeedback: true
-            });
-        }
+        await updateDoc(userDocRef, {
+            feedback: feedback,
+            hasGivenFeedback: true
+        });
     } catch (error) {
         console.error("Error submitting feedback:", error);
     }
@@ -200,7 +194,7 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-        if(data.displayName !== form.getValues('displayName')) {
+        if(data.displayName !== userData?.displayName) {
             await updateDoc(doc(db, "users", user.uid), { displayName: data.displayName });
         }
         
