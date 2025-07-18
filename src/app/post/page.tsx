@@ -131,15 +131,6 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-          <Button
-            size="icon"
-            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-          >
-            <Plus className="h-8 w-8" />
-            <span className="sr-only">Buat Postingan Baru</span>
-          </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-[90vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Buat Postingan Baru</DialogTitle>
@@ -448,7 +439,19 @@ export default function PostPage() {
         )}
       </main>
       
-      {user && <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />}
+      {user && (
+        <>
+          <Button
+            size="icon"
+            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+            onClick={() => setIsCreatePostOpen(true)}
+          >
+            <Plus className="h-8 w-8" />
+            <span className="sr-only">Buat Postingan Baru</span>
+          </Button>
+          <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
+        </>
+      )}
 
       {/* Edit Caption Dialog */}
        <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
