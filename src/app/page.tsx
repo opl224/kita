@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Coins } from "lucide-react";
+import { DollarSign, Users, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
@@ -195,7 +195,7 @@ export default function Home() {
                                   <p className="text-sm text-muted-foreground">{u.email}</p>
                               </div>
                               <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
-                                  <Coins className="h-5 w-5 text-yellow-500" />
+                                  <Plus className="h-5 w-5 text-primary" />
                               </Button>
                           </div>
                       ))}

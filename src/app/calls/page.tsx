@@ -319,9 +319,6 @@ export default function VoiceNoteGroupsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Buat Grup Baru</DialogTitle>
-                  <DialogDescription>
-                    Masukkan nama untuk grup baru Anda.
-                  </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
@@ -351,9 +348,6 @@ export default function VoiceNoteGroupsPage() {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Ubah Nama Grup</DialogTitle>
-                <DialogDescription>
-                    Masukkan nama baru untuk grup "{editingGroup?.name}".
-                </DialogDescription>
             </DialogHeader>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
