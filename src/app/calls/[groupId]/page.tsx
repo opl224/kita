@@ -198,6 +198,7 @@ export default function GroupChatPage() {
     useEffect(() => {
         if (!user || !groupId) return;
 
+        setLoading(true);
         const groupDocRef = doc(db, 'groups', groupId);
         const getGroupInfo = async () => {
             try {
@@ -499,7 +500,7 @@ const startRecording = async () => {
                                             disabled={invitingUsers.has(u.id)}
                                         >
                                             {invitingUsers.has(u.id) ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <CustomLoader />
                                             ) : (
                                                 <UserPlus className="h-4 w-4 mr-2" />
                                             )}
@@ -523,18 +524,18 @@ const startRecording = async () => {
                     return (
                         <div key={msg.id} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
                            
-                           {!isSender && (
-                               <Avatar className="h-8 w-8">
-                                   <AvatarImage src={msg.senderAvatar} />
-                                   <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
-                               </Avatar>
-                           )}
-                           
-                            <div className={`flex items-center gap-2 ${isSender ? 'flex-row-reverse' : ''}`}>
+                            <div className={`flex items-center gap-2 ${isSender ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {!isSender && (
+                                   <Avatar className="h-8 w-8 self-end">
+                                       <AvatarImage src={msg.senderAvatar} />
+                                       <AvatarFallback>{msg.senderName?.charAt(0) || 'P'}</AvatarFallback>
+                                   </Avatar>
+                               )}
+
                                 {isSender && isDeletable && (
                                     <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center">
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive self-center h-8 w-8">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                     </AlertDialogTrigger>
