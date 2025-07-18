@@ -40,13 +40,11 @@ export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolea
       
       return () => {
         window.removeEventListener('popstate', handlePopState);
-        dialogState.isOpen = false;
-      };
-    } else if (dialogState.isOpen) {
         if (window.history.state?.dialogOpen) {
           window.history.back();
         }
         dialogState.isOpen = false;
+      };
     }
   }, [isOpen, onOpenChange]);
 }
@@ -90,17 +88,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    // We add a state to the history to be able to catch the back button event.
-    window.history.pushState({ custom: true }, '');
-
+    const isRootPage = menuItems.some(item => item.href === pathname);
+    
     const handlePopState = (event: PopStateEvent) => {
         event.preventDefault();
-        
-        // Push the state again to keep catching the back button
-        window.history.pushState({ custom: true }, '');
 
         if (dialogState.isOpen) {
             dialogState.close();
+            return;
+        }
+
+        if (!isRootPage) {
+            router.back();
             return;
         }
 
@@ -114,19 +113,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             setTimeout(() => {
                 backPressCountRef.current = 0;
-            }, 2000); // Reset counter after 2 seconds
+            }, 2000);
         } else if (backPressCountRef.current === 2) {
             window.dispatchEvent(showLogoutDialogEvent);
-            backPressCountRef.current = 0; // Reset after triggering
+            backPressCountRef.current = 0;
         }
     };
-
+    
     window.addEventListener('popstate', handlePopState);
     
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [router, toast]);
+  }, [router, pathname, toast]);
 
 
   const handleTouchStart = (e: TouchEvent) => {
