@@ -50,7 +50,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <ChevronLeft className="h-5 w-5" />
+        <ChevronLeft className="h-5 w-5 text-foreground" />
         <span className="sr-only">Halaman Sebelumnya</span>
       </Button>
       <span className="text-sm font-medium text-muted-foreground tabular-nums">
@@ -62,7 +62,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-5 w-5 text-foreground" />
         <span className="sr-only">Halaman Berikutnya</span>
       </Button>
     </div>
@@ -111,14 +111,12 @@ export default function Home() {
         setIsSuperUser(isOpank);
         setLoading(false); 
       } else {
-        setUser(null);
-        setIsSuperUser(false);
-        setLoading(false);
+        router.push('/login');
       }
     });
 
     return () => unsubscribeAuth();
-  }, [auth, db]);
+  }, [auth, db, router]);
 
   useEffect(() => {
     if (!user) {
