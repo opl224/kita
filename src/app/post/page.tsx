@@ -53,7 +53,7 @@ type EditCaptionFormValues = z.infer<typeof editCaptionSchema>;
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
 const neumorphicButtonStyle = "shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
-function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenChange: (open: boolean) => void, user: User | null }) {
+export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenChange: (open: boolean) => void, user: User | null }) {
   const [caption, setCaption] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [base64Image, setBase64Image] = useState<string>('');
@@ -208,7 +208,8 @@ export default function PostPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  // This state is now controlled by AppShell
+  // const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
 
@@ -439,6 +440,8 @@ export default function PostPage() {
         )}
       </main>
       
+      {/* This Dialog is now rendered and controlled by AppShell */}
+      {/* 
       {user && (
         <>
           <Button
@@ -452,6 +455,7 @@ export default function PostPage() {
           <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
         </>
       )}
+      */}
 
       {/* Edit Caption Dialog */}
        <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>

@@ -41,7 +41,7 @@ type Group = {
 
 const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
 
-function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, editingGroup: Group | null, onSubmit: (data: GroupFormValues) => void }) {
+export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, editingGroup: Group | null, onSubmit: (data: GroupFormValues) => void }) {
   const form = useForm<GroupFormValues>({
     resolver: zodResolver(groupFormSchema),
     defaultValues: { name: "" },
@@ -92,7 +92,9 @@ export default function VoiceNoteGroupsPage() {
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  
+  // This state is now controlled by AppShell
+  // const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
@@ -201,7 +203,8 @@ export default function VoiceNoteGroupsPage() {
                 lastMessage: "Grup baru saja dibuat.",
                 lastMessageTime: serverTimestamp()
             });
-            setIsCreatingGroup(false);
+            // This is now controlled by AppShell
+            // setIsCreatingGroup(false);
         }
     } catch (error) {
        console.error("Error saving group:", error);
@@ -317,32 +320,14 @@ export default function VoiceNoteGroupsPage() {
             </div>
           </Card>
         ))}
-         {isSuperUser && (
-            <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
-              <DialogTrigger asChild>
-                <Button
-                  size="icon"
-                  className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-                >
-                  <Plus className="h-8 w-8" />
-                  <span className="sr-only">Buat Grup Baru</span>
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-         )}
       </main>
 
-      <CreateEditGroupDialog 
-        open={isCreatingGroup || !!editingGroup}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setIsCreatingGroup(false);
-            setEditingGroup(null);
-          }
-        }}
-        editingGroup={editingGroup}
-        onSubmit={onGroupSubmit}
-      />
+       <CreateEditGroupDialog 
+         open={!!editingGroup}
+         onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}
+         editingGroup={editingGroup}
+         onSubmit={onGroupSubmit}
+       />
     </div>
   );
 }

@@ -365,7 +365,7 @@ export default function Home() {
                   <div className="flex items-center gap-4">
                     <Heart className="h-8 w-8" />
                     <div className="flex flex-col">
-                      <span className="text-sm text-muted-foreground">Total Suka Saya</span>
+                      <span className="text-sm text-muted-foreground">Total Suka</span>
                       <span className="text-3xl font-bold text-foreground">
                         {myTotalLikes}
                       </span>
