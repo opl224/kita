@@ -81,7 +81,6 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
@@ -119,7 +118,6 @@ export default function Home() {
         setUser(currentUser);
       } else {
         router.push('/login');
-        setLoading(false);
       }
     });
 
@@ -128,11 +126,9 @@ export default function Home() {
   
     useEffect(() => {
         if (!user) {
-            setLoading(false);
             return;
         }
 
-        setLoading(true);
         const userDocRef = doc(db, "users", user.uid);
 
         const unsubscribeUser = onSnapshot(userDocRef, async (docSnap) => {
@@ -145,7 +141,6 @@ export default function Home() {
                     await updateDoc(userDocRef, { isSuperUser: true });
                  }
             }
-            setLoading(false);
         });
 
         const appStateRef = doc(db, "appState", "main");
@@ -287,7 +282,7 @@ export default function Home() {
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
   
-  const showFeedbackCard = !loading && userData && !isSuperUser && userData.hasGivenFeedback === false;
+  const showFeedbackCard = userData && !isSuperUser && userData.hasGivenFeedback === false;
 
   const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
 
@@ -295,8 +290,8 @@ export default function Home() {
     setIsLogoutDialogOpen(true);
   }
 
-  if (loading) {
-    return <CustomLoader />;
+  if (!user || !userData) {
+    return null; // AppShell will handle the loader
   }
 
   return (
@@ -404,14 +399,14 @@ export default function Home() {
                                         <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
                                     </div>
                                 </div>
-                                
                                 <div onClick={(e) => e.stopPropagation()}>
                                     <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
                                         <DialogTrigger asChild>
                                             <Button 
                                                 size="icon" 
                                                 className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     setEditingUser(u);
                                                 }}
                                             >

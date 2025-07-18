@@ -131,73 +131,85 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Buat Postingan Baru</DialogTitle>
-          <DialogDescription>Bagikan momen Anda dengan pengguna lain.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            placeholder="Tulis keterangan..."
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            className="h-24 resize-none bg-background rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary"
-            disabled={isSubmitting}
-          />
+       <DialogContent className="max-w-[90vw] sm:max-w-md bg-transparent border-none shadow-none">
+         <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+            <DialogHeader>
+              <DialogTitle>Buat Postingan Baru</DialogTitle>
+              <DialogDescription>Bagikan momen Anda dengan pengguna lain.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <Textarea
+                placeholder="Tulis keterangan..."
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                className="h-24 resize-none bg-background rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary border-none"
+                disabled={isSubmitting}
+              />
 
-          <Input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            className="hidden"
-            accept="image/*"
-            disabled={isSubmitting}
-          />
-          
-          {imagePreview ? (
-              <div className="relative aspect-square w-full rounded-lg overflow-hidden shadow-neumorphic-inset p-2">
-                  <Image
-                    src={imagePreview}
-                    alt="Pratinjau gambar"
-                    layout="fill"
-                    objectFit="contain"
-                    unoptimized
-                  />
-                  <Button 
-                    size="icon" 
-                    variant="destructive"
-                    type="button"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full z-10"
-                    onClick={() => {
-                      setImagePreview(null);
-                      setBase64Image('');
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    disabled={isSubmitting}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-              </div>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`${neumorphicButtonStyle} w-full h-24 flex-col gap-2`}
-              disabled={isSubmitting}
-            >
-              <Upload className="h-6 w-6" />
-              <span>Pilih Gambar</span>
-            </Button>
-          )}
+              <Input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                className="hidden"
+                accept="image/*"
+                disabled={isSubmitting}
+              />
+              
+              {imagePreview ? (
+                  <div className="relative aspect-square w-full rounded-lg overflow-hidden shadow-neumorphic-inset p-2">
+                      <Image
+                        src={imagePreview}
+                        alt="Pratinjau gambar"
+                        layout="fill"
+                        objectFit="contain"
+                        unoptimized
+                      />
+                      <Button 
+                        size="icon" 
+                        variant="destructive"
+                        type="button"
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full z-10"
+                        onClick={() => {
+                          setImagePreview(null);
+                          setBase64Image('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                  </div>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`${neumorphicButtonStyle} w-full h-24 flex-col gap-2`}
+                  disabled={isSubmitting}
+                >
+                  <Upload className="h-6 w-6" />
+                  <span>Pilih Gambar</span>
+                </Button>
+              )}
 
-          <Button 
-            type="submit" 
-            className="w-full h-12"
-            disabled={!base64Image || isSubmitting}
+              <Button 
+                type="submit" 
+                className={`${neumorphicButtonStyle} w-full h-12`}
+                disabled={!base64Image || isSubmitting}
+              >
+                {isSubmitting ? <CustomLoader /> : 'Posting'}
+              </Button>
+            </form>
+         </div>
+         <DialogTrigger asChild>
+            <button className="sr-only">Close</button>
+         </DialogTrigger>
+         <button 
+            onClick={() => onOpenChange(false)} 
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
           >
-            {isSubmitting ? <CustomLoader /> : 'Posting'}
-          </Button>
-        </form>
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
       </DialogContent>
     </Dialog>
   );
@@ -206,10 +218,7 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
 
 export default function PostPage() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  // This state is now controlled by AppShell
-  // const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
 
@@ -243,7 +252,6 @@ export default function PostPage() {
   }, [auth]);
 
   useEffect(() => {
-    setLoading(true);
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: Post[] = [];
@@ -251,10 +259,8 @@ export default function PostPage() {
         postsData.push({ id: doc.id, ...doc.data() } as Post);
       });
       setPosts(postsData);
-      setLoading(false);
     }, (error) => {
       console.error("Error fetching posts:", error);
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -280,6 +286,7 @@ export default function PostPage() {
             
             const likersData: Liker[] = [];
             for (const chunk of likerChunks) {
+                if (chunk.length === 0) continue;
                 const q = query(usersRef, where(documentId(), 'in', chunk));
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => {
@@ -339,6 +346,10 @@ export default function PostPage() {
       }
   };
 
+  if (!user) {
+    return null; // AppShell will handle the loader
+  }
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
       <header>
@@ -348,9 +359,7 @@ export default function PostPage() {
       </header>
 
       <main className="space-y-6 pb-24">
-        {loading ? (
-          <CustomLoader />
-        ) : posts.length === 0 ? (
+        {posts.length === 0 ? (
            <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                 <Upload className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold text-foreground">Belum Ada Postingan</h3>
@@ -440,23 +449,6 @@ export default function PostPage() {
         )}
       </main>
       
-      {/* This Dialog is now rendered and controlled by AppShell */}
-      {/* 
-      {user && (
-        <>
-          <Button
-            size="icon"
-            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-            onClick={() => setIsCreatePostOpen(true)}
-          >
-            <Plus className="h-8 w-8" />
-            <span className="sr-only">Buat Postingan Baru</span>
-          </Button>
-          <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
-        </>
-      )}
-      */}
-
       {/* Edit Caption Dialog */}
        <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
           <DialogContent>

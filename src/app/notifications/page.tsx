@@ -30,7 +30,6 @@ type Invitation = {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [processingInvite, setProcessingInvite] = useState<string | null>(null);
   const db = getFirestore(app);
@@ -39,9 +38,6 @@ export default function NotificationsPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
-        setLoading(false);
-      }
     });
     return () => unsubscribeAuth();
   }, [auth]);
@@ -51,13 +47,9 @@ export default function NotificationsPage() {
     if (!user) {
         setNotifications([]);
         setInvitations([]);
-        if (auth.currentUser === null) { // Only set loading false if auth state is determined
-          setLoading(false);
-        }
         return;
     }
 
-    setLoading(true);
     // Mark all notifications as seen when the user visits this page
     const userDocRef = doc(db, "users", user.uid);
     updateDoc(userDocRef, {
@@ -72,10 +64,8 @@ export default function NotificationsPage() {
         fetchedNotifications.push({ id: doc.id, ...doc.data() } as Notification);
       });
       setNotifications(fetchedNotifications);
-      setLoading(false);
     }, (error) => {
         console.error("Error fetching notifications:", error);
-        setLoading(false);
     });
 
     // Fetch pending invitations for the current user
@@ -134,6 +124,10 @@ export default function NotificationsPage() {
   };
 
 
+  if (!user) {
+    return null; // AppShell will handle the loader
+  }
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
       <header className="flex justify-between items-center">
@@ -145,9 +139,7 @@ export default function NotificationsPage() {
       </header>
 
       <main className="space-y-6">
-        {loading ? (
-            <CustomLoader />
-        ) : notifications.length === 0 && invitations.length === 0 ? (
+        {notifications.length === 0 && invitations.length === 0 ? (
             <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                 <Bell className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold text-foreground">Tidak Ada Pemberitahuan</h3>

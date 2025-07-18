@@ -91,10 +91,7 @@ export default function VoiceNoteGroupsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
   
-  // This state is now controlled by AppShell
-  // const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
@@ -116,7 +113,6 @@ export default function VoiceNoteGroupsPage() {
             setUser(null);
             setIsSuperUser(false);
         }
-        setLoading(false); // If no user, stop loading
     });
 
     return () => unsubscribeAuth();
@@ -125,13 +121,8 @@ export default function VoiceNoteGroupsPage() {
   useEffect(() => {
     if (!user) {
         setGroups([]);
-        if (auth.currentUser === null) { // Only set loading false if auth state is determined
-          setLoading(false);
-        }
         return;
     }
-
-    setLoading(true);
 
     const groupsCollection = collection(db, 'groups');
     const q = query(
@@ -176,10 +167,8 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setGroups(groupList);
         }
-        setLoading(false);
     }, (error) => {
       console.error("Error fetching groups:", error);
-      setLoading(false);
     });
 
     return () => unsubscribeGroups();
@@ -203,8 +192,6 @@ export default function VoiceNoteGroupsPage() {
                 lastMessage: "Grup baru saja dibuat.",
                 lastMessageTime: serverTimestamp()
             });
-            // This is now controlled by AppShell
-            // setIsCreatingGroup(false);
         }
     } catch (error) {
        console.error("Error saving group:", error);
@@ -229,8 +216,8 @@ export default function VoiceNoteGroupsPage() {
   };
 
 
-  if (loading) {
-    return <CustomLoader />;
+  if (!user) {
+    return null; // AppShell will handle the loader
   }
 
   return (
