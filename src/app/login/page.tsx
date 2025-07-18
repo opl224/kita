@@ -9,11 +9,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Eye, EyeOff } from "lucide-react";
 
 const loginFormSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -30,6 +32,7 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset
 export default function LoginPage() {
   const router = useRouter();
   const auth = getAuth(app);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -79,9 +82,20 @@ export default function LoginPage() {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Kata Sandi</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-12 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                     </FormItem>
                 )}
