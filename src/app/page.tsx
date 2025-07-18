@@ -59,7 +59,7 @@ export default function Home() {
         setUser(currentUser);
         const isOpank = currentUser.uid === superUserUid;
         setIsSuperUser(isOpank);
-        setLoading(false); // Set loading to false once user is determined
+        setLoading(false); 
       } else {
         setUser(null);
         setIsSuperUser(false);
@@ -72,7 +72,6 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) {
-      // Clear all data if user logs out
       setUserData(null);
       setAllUsers([]);
       setUserFeedback([]);
@@ -80,7 +79,6 @@ export default function Home() {
       return;
     }
 
-    // Common listeners for all users
     const userDocRef = doc(db, "users", user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -95,7 +93,6 @@ export default function Home() {
       }
     });
 
-    // Listener for SuperUser ONLY
     let unsubscribeAllUsers: (() => void) | undefined;
     if (isSuperUser) {
       const usersCollection = collection(db, "users");
@@ -110,14 +107,14 @@ export default function Home() {
           feedback: u.feedback
         }));
         setUserFeedback(feedbackList);
+      }, (error) => {
+        console.error("Error fetching all users:", error);
       });
     } else {
-      // Ensure non-admin user data is cleared
       setAllUsers([]);
       setUserFeedback([]);
     }
 
-    // Cleanup function
     return () => {
       unsubscribeUser();
       unsubscribeAppState();
@@ -145,14 +142,11 @@ export default function Home() {
         
         transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
-        // Create a notification for the record
-        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)} untuk ${editingUser.displayName}`;
+        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
         const notificationsCollection = collection(db, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
           createdAt: serverTimestamp(),
-          userId: editingUser.id,
-          userName: editingUser.displayName,
           amount: amountToAdd,
         });
       });
