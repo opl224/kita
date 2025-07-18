@@ -327,7 +327,12 @@ export default function PostPage() {
                     <div className="flex-1">
                         <p className="font-semibold">{post.userName}</p>
                         <p className="text-xs text-muted-foreground">
-                             {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
+                             {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: false, locale: id })
+                             .replace('kurang dari ', '')
+                             .replace('sekitar ', '')
+                             .replace('pada ', '')
+                             .replace('yang lalu ', '')
+                             : 'baru saja'}
                         </p>
                     </div>
                      {isOwner && (

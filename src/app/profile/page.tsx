@@ -131,7 +131,7 @@ export default function ProfilePage() {
 
           if (userData.hasGivenFeedback === false) {
              setShowFeedbackDialog(true);
-          } else {
+          } else if (userData.hasGivenFeedback === true) {
              setShowFeedbackDialog(false);
           }
         }
@@ -374,4 +374,5 @@ export default function ProfilePage() {
        />
     </div>
   );
-}
+
+    
