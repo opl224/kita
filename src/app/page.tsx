@@ -142,7 +142,7 @@ export default function Home() {
         
         transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
-        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
+        const notificationMessage = `${editingUser.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
         const notificationsCollection = collection(db, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
