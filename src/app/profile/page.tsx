@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { getAuth, signOut, onAuthStateChanged, User, updatePassword } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
@@ -107,31 +107,48 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        const docRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(docRef);
+    const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.push('/login');
+        setLoading(false);
+        setUser(null);
+        return;
+      }
+      
+      setUser(currentUser);
+      
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const userData = docSnap.data();
           form.reset({
-            displayName: userData.displayName,
-            email: userData.email,
+            displayName: userData.displayName || '',
+            email: userData.email || '',
+            password: '',
+            confirmPassword: '',
           });
-          setAvatarUrl(userData.avatarUrl);
-          
+          setAvatarUrl(userData.avatarUrl || '');
+
           if (userData.hasGivenFeedback === false) {
              setShowFeedbackDialog(true);
+          } else {
+             setShowFeedbackDialog(false);
           }
-
         }
-      } else {
-        router.push('/login');
-      }
-      setLoading(false);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching user data with onSnapshot:", error);
+        setLoading(false);
+      });
+
+      return () => {
+        userUnsubscribe();
+      };
     });
-    return () => unsubscribe();
+
+    return () => authUnsubscribe();
   }, [auth, db, router, form]);
+
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || !user) return;
