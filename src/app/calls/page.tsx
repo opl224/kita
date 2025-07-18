@@ -4,7 +4,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil, Loader2 } from "lucide-react";
+import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil, Loader2, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, writeBatch, updateDoc } from "firebase/firestore";
@@ -230,7 +230,7 @@ export default function VoiceNoteGroupsPage() {
         </h1>
       </header>
 
-      <main className="space-y-6">
+      <main className="space-y-6 pb-24">
         {groups.map(group => (
           <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
             <div className="flex flex-col gap-4">
@@ -306,42 +306,43 @@ export default function VoiceNoteGroupsPage() {
           </Card>
         ))}
          {isSuperUser && (
-           <div className="text-center pt-4">
-              <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
-                <DialogTrigger asChild>
-                  <Button variant="default" className="h-14 rounded-xl shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all text-base font-bold bg-primary text-primary-foreground">
-                      <UserPlus className="mr-2"/>
-                      Buat Grup Baru
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Buat Grup Baru</DialogTitle>
-                      <DialogDescription>
-                        Masukkan nama untuk grup baru Anda.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nama Grup</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Contoh: Tim Proyek Hebat" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">Buat Grup</Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-              </Dialog>
-           </div>
+            <Dialog open={isCreatingGroup} onOpenChange={setIsCreatingGroup}>
+              <DialogTrigger asChild>
+                <Button
+                  size="icon"
+                  className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+                >
+                  <Plus className="h-8 w-8" />
+                  <span className="sr-only">Buat Grup Baru</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Buat Grup Baru</DialogTitle>
+                  <DialogDescription>
+                    Masukkan nama untuk grup baru Anda.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onGroupSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nama Grup</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Contoh: Tim Proyek Hebat" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full">Buat Grup</Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
          )}
       </main>
 
