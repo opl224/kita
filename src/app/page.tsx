@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
@@ -28,6 +28,12 @@ const moneyFormSchema = z.object({
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
 
 const ITEMS_PER_PAGE = 5;
+
+type UserFeedback = {
+  id: string;
+  displayName: string;
+  feedback: 'like' | 'dislike';
+}
 
 const PaginationControls = ({ currentPage, totalPages, onPageChange, className }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void, className?: string }) => {
   if (totalPages <= 1) return null;
@@ -68,12 +74,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [userFeedbacks, setUserFeedbacks] = useState<UserFeedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [myTotalLikes, setMyTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
 
   const [allUsersPage, setAllUsersPage] = useState(1);
+  const [feedbackPage, setFeedbackPage] = useState(1);
   
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
@@ -102,95 +110,97 @@ export default function Home() {
     return () => unsubscribeAuth();
   }, [auth, router]);
 
+  // General data fetching for all users
   useEffect(() => {
     if (!user) {
-      setLoading(false);
-      return;
+        setLoading(false);
+        return;
     }
-  
+
     setLoading(true);
-    let unsubscribeAll: (() => void)[] = [];
-  
+    const unsubscribes: (() => void)[] = [];
+
     // Listener for the current user's data
     const userDocRef = doc(db, "users", user.uid);
-    const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUserData(data);
-        const userIsAdmin = !!data.isSuperUser;
-        setIsSuperUser(userIsAdmin);
-  
-        // If user is an admin, set up admin-specific listeners
-        if (userIsAdmin) {
-          const usersCollection = collection(db, "users");
-          const postsCollection = collection(db, "posts");
-  
-          const unsubscribeUsers = onSnapshot(usersCollection, (usersSnapshot) => {
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
-            const unsubscribePosts = onSnapshot(postsCollection, (postsSnapshot) => {
-              const likesCountByUser: { [userId: string]: number } = {};
-              
-              postsSnapshot.forEach(postDoc => {
+    unsubscribes.push(onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserData(data);
+            setIsSuperUser(!!data.isSuperUser);
+        }
+        setLoading(false);
+    }));
+
+    // Listener for global app state (total money)
+    const appStateRef = doc(db, "appState", "main");
+    unsubscribes.push(onSnapshot(appStateRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setTotalCollected(docSnap.data().totalMoneyCollected || 0);
+        }
+    }));
+
+    // Listener for the current user's total likes
+    const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
+    unsubscribes.push(onSnapshot(userPostsQuery, (postsSnapshot) => {
+        let totalLikesCount = 0;
+        postsSnapshot.forEach(postDoc => {
+            const post = postDoc.data();
+            totalLikesCount += (post.likes || []).length;
+        });
+        setMyTotalLikes(totalLikesCount);
+    }));
+
+    return () => {
+        unsubscribes.forEach(unsub => unsub());
+    };
+  }, [user, db]);
+
+  // Admin-specific data fetching
+  useEffect(() => {
+    if (!isSuperUser) {
+        setAllUsers([]);
+        setUserFeedbacks([]);
+        return;
+    }
+
+    const unsubscribes: (() => void)[] = [];
+
+    // Listener for all users data and their posts to calculate likes
+    const usersCollection = collection(db, "users");
+    const postsCollection = collection(db, "posts");
+
+    const usersQuery = query(usersCollection);
+    unsubscribes.push(onSnapshot(usersQuery, (usersSnapshot) => {
+        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const postsQuery = query(postsCollection);
+        const unsubscribePosts = onSnapshot(postsQuery, (postsSnapshot) => {
+            const likesCountByUser: { [userId: string]: number } = {};
+            postsSnapshot.forEach(postDoc => {
                 const post = postDoc.data();
                 const postOwnerId = post.userId;
                 const likesCount = (post.likes || []).length;
-                
-                if (likesCountByUser[postOwnerId]) {
-                  likesCountByUser[postOwnerId] += likesCount;
-                } else {
-                  likesCountByUser[postOwnerId] = likesCount;
-                }
-              });
-  
-              const usersWithLikes = usersList.map(u => ({
+                likesCountByUser[postOwnerId] = (likesCountByUser[postOwnerId] || 0) + likesCount;
+            });
+
+            const usersWithLikes = usersList.map(u => ({
                 ...u,
                 totalLikes: likesCountByUser[u.id] || 0
-              }));
-  
-              setAllUsers(usersWithLikes);
-            });
-            unsubscribeAll.push(unsubscribePosts);
-          });
-          unsubscribeAll.push(unsubscribeUsers);
-        } else {
-          // If user is not an admin, clear the allUsers list
-          setAllUsers([]);
-        }
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching user data:", error);
-      setLoading(false);
-    });
-    unsubscribeAll.push(unsubscribeUser);
-  
-    // Listener for global app state (total money)
-    const appStateRef = doc(db, "appState", "main");
-    const unsubscribeAppState = onSnapshot(appStateRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setTotalCollected(docSnap.data().totalMoneyCollected || 0);
-      }
-    });
-    unsubscribeAll.push(unsubscribeAppState);
-  
-    // Listener for the current user's total likes
-    const userPostsQuery = query(collection(db, "posts"), where("userId", "==", user.uid));
-    const unsubscribeUserLikes = onSnapshot(userPostsQuery, (postsSnapshot) => {
-      let totalLikesCount = 0;
-      postsSnapshot.forEach(postDoc => {
-        const post = postDoc.data();
-        totalLikesCount += (post.likes || []).length;
-      });
-      setMyTotalLikes(totalLikesCount);
-    });
-    unsubscribeAll.push(unsubscribeUserLikes);
-  
-    // Cleanup all listeners on unmount
+            }));
+            setAllUsers(usersWithLikes);
+
+            const feedbackList = usersList
+              .filter(u => u.hasGivenFeedback === true && u.feedback)
+              .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
+            setUserFeedbacks(feedbackList);
+        });
+        unsubscribes.push(unsubscribePosts);
+    }));
+
     return () => {
-      unsubscribeAll.forEach(unsub => unsub());
+        unsubscribes.forEach(unsub => unsub());
     };
-  }, [user, db]);
+  }, [isSuperUser, db]);
 
 
   const handleAddMoney = async (data: MoneyFormValues) => {
@@ -241,6 +251,9 @@ export default function Home() {
 
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
+
+  const totalFeedbackPages = Math.ceil(userFeedbacks.length / ITEMS_PER_PAGE);
+  const paginatedFeedbacks = userFeedbacks.slice((feedbackPage - 1) * ITEMS_PER_PAGE, feedbackPage * ITEMS_PER_PAGE);
   
   if (loading) {
     return <CustomLoader />;
@@ -291,7 +304,7 @@ export default function Home() {
                   <div className="flex items-center gap-4">
                     <Heart className="h-8 w-8" />
                     <div className="flex flex-col">
-                      <span className="text-sm text-muted-foreground">Total Suka</span>
+                      <span className="text-sm text-muted-foreground">Total Suka Saya</span>
                       <span className="text-3xl font-bold text-foreground">
                         {myTotalLikes}
                       </span>
@@ -372,6 +385,36 @@ export default function Home() {
                     currentPage={allUsersPage}
                     totalPages={totalUserPages}
                     onPageChange={setAllUsersPage}
+                  />
+              </CardContent>
+            </Card>
+
+            <Card className={`${neumorphicCardStyle} p-6`}>
+              <CardHeader className="p-0 mb-4">
+                  <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
+                    <Users className="h-6 w-6"/>
+                    Penilaian Pengguna
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                  <div className="space-y-4">
+                      {paginatedFeedbacks.map((f) => (
+                          <div key={f.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                              <div className="flex-1">
+                                  <p className="font-semibold text-foreground">{f.displayName}</p>
+                              </div>
+                              {f.feedback === 'like' ? (
+                                  <ThumbsUp className="h-6 w-6 text-green-500" />
+                              ) : (
+                                  <ThumbsDown className="h-6 w-6 text-red-500" />
+                              )}
+                          </div>
+                      ))}
+                  </div>
+                  <PaginationControls 
+                    currentPage={feedbackPage}
+                    totalPages={totalFeedbackPages}
+                    onPageChange={setFeedbackPage}
                   />
               </CardContent>
             </Card>
