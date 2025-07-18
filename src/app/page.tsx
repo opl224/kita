@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -141,10 +141,8 @@ export default function Home() {
                 setUserData(data);
                 const userIsAdmin = !!data.isSuperUser;
                 setIsSuperUser(userIsAdmin);
-            } else {
-                 if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2") {
+                 if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2" && !data.isSuperUser) {
                     await updateDoc(userDocRef, { isSuperUser: true });
-                    setIsSuperUser(true);
                  }
             }
             setLoading(false);
