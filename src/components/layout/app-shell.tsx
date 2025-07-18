@@ -7,11 +7,21 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Smartphone } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SWIPE_THRESHOLD = 50;
 const showLogoutDialogEvent = new Event('show-logout-dialog');
@@ -62,6 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = getAuth(app);
   const { toast } = useToast();
   const backPressCountRef = useRef(0);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isAuthRequired = !isAuthPage;
@@ -88,8 +99,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    const isRootPage = menuItems.some(item => item.href === pathname);
-    
     const handlePopState = (event: PopStateEvent) => {
         event.preventDefault();
 
@@ -98,13 +107,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        const isRootPage = menuItems.some(item => item.href === pathname);
+        
         if (!isRootPage) {
             router.back();
             return;
         }
 
         backPressCountRef.current += 1;
-
+        
         if (backPressCountRef.current === 1) {
             toast({
                 description: "Tekan sekali lagi untuk keluar.",
@@ -115,11 +126,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 backPressCountRef.current = 0;
             }, 2000);
         } else if (backPressCountRef.current === 2) {
-            window.dispatchEvent(showLogoutDialogEvent);
-            backPressCountRef.current = 0;
+            setIsLogoutDialogOpen(true);
+            backPressCountRef.current = 0; 
         }
     };
     
+    // Add a history entry to capture the back button press
+    window.history.pushState(null, '');
     window.addEventListener('popstate', handlePopState);
     
     return () => {
@@ -127,6 +140,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [router, pathname, toast]);
 
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      setIsLogoutDialogOpen(false);
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  }
 
   const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null);
@@ -199,6 +221,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       {user && !isGroupChatPage && <SidebarNav />}
+
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Apakah Anda yakin ingin keluar dari aplikasi? Anda akan dikembalikan ke halaman login.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setIsLogoutDialogOpen(false)}>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>Keluar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
