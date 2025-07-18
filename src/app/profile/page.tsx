@@ -15,9 +15,10 @@ import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Camera, LogOut, Loader, Moon, Sun, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Camera, LogOut, Loader, Moon, Sun, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
 import {
   AlertDialog,
@@ -212,6 +213,36 @@ export default function ProfilePage() {
 
       <div className="flex flex-col gap-6">
         <Card className={`${neumorphicCardStyle} relative`}>
+            <div className="absolute top-4 left-4 z-10">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset border-none"
+                            >
+                            <Info className="h-6 w-6" />
+                            <span className="sr-only">Info Aplikasi</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-headline">Informasi Aplikasi</DialogTitle>
+                            <DialogDescription>
+                                Detail teknis dan kredit untuk aplikasi Kita's.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="text-sm space-y-3 text-foreground">
+                            <p><strong>Framework:</strong> Next.js (React)</p>
+                            <p><strong>Bahasa:</strong> TypeScript</p>
+                            <p><strong>Styling:</strong> Tailwind CSS & ShadCN UI</p>
+                            <p><strong>Desain:</strong> Neumorphic Style</p>
+                            <p><strong>Database:</strong> Firebase Firestore</p>
+                            <p><strong>Font:</strong> Poppins (Judul), PT Sans (Isi)</p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
             <div className="absolute top-4 right-4 z-10">
                 <Button
                     variant="ghost"
