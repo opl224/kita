@@ -96,9 +96,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
 
       const currentPath = window.location.pathname;
-      const nonHomePages = ['/calls', '/notifications', '/profile'];
       
-      if (nonHomePages.includes(currentPath)) {
+      if (currentPath !== '/') {
         router.push('/');
         return;
       }
@@ -107,8 +106,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
          window.dispatchEvent(showLogoutDialogEvent);
          return;
       }
-      
-      router.back();
     };
 
     window.addEventListener('popstate', handlePopState);
