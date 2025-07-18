@@ -92,7 +92,6 @@ export default function VoiceNoteGroupsPage() {
     }
     
     const groupsCollection = collection(db, 'groups');
-    // Hanya ambil grup di mana pengguna saat ini adalah anggota
     const q = query(
       groupsCollection, 
       where('members', 'array-contains', user.uid), 
@@ -270,7 +269,7 @@ export default function VoiceNoteGroupsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center -space-x-2">
                     {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
-                      <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
+                      <Avatar key={member?.uid || index} className="h-10 w-10 border-2 border-background">
                         <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
                         <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
