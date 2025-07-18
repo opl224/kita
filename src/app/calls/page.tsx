@@ -227,112 +227,114 @@ export default function VoiceNoteGroupsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in-50">
-      <header className="flex justify-between items-center">
-        <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-          Pesan Suara Grup
-        </h1>
-      </header>
+    <div>
+        <div className="flex flex-col gap-8 animate-in fade-in-50">
+            <header className="flex justify-between items-center">
+                <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+                Pesan Suara Grup
+                </h1>
+            </header>
 
-      <main className="space-y-6 pb-24">
-        {groups.map(group => (
-          <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
-                 {(isSuperUser || user?.uid === group.createdBy) && (
-                  <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
-                      <AlertDialogTrigger asChild>
-                          <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-muted-foreground hover:text-destructive h-8 w-8"
-                              onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
-                          >
-                              <Trash2 className="h-4 w-4" />
-                          </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                          <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup secara permanen. Pesan di dalamnya tidak akan terhapus dari sisi aplikasi ini.
-                              </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                )}
-              </div>
+            <main className="space-y-6 pb-24">
+                {groups.map(group => (
+                <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
+                    <div className="flex flex-col gap-4">
+                    <div className="flex items-start justify-between gap-2">
+                        <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
+                        {(isSuperUser || user?.uid === group.createdBy) && (
+                        <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
+                            <AlertDialogTrigger asChild>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                    onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup secara permanen. Pesan di dalamnya tidak akan terhapus dari sisi aplikasi ini.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                        )}
+                    </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center -space-x-2">
-                    {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
-                      <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
-                        <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
-                        <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                     {group.members && group.members.length > 5 && (
-                        <Avatar className="h-10 w-10 border-2 border-background bg-muted">
-                            <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
-                        </Avatar>
-                    )}
-                </div>
-                <Button variant="ghost" size="icon" className="text-primary opacity-50" onClick={() => handleGroupClick(group.id)}>
-                    <ArrowRight className="h-6 w-6" />
-                    <span className="sr-only">Masuk Grup</span>
-                </Button>
-              </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center -space-x-2">
+                            {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
+                            <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
+                                <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
+                                <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
+                            </Avatar>
+                            ))}
+                            {group.members && group.members.length > 5 && (
+                                <Avatar className="h-10 w-10 border-2 border-background bg-muted">
+                                    <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
+                                </Avatar>
+                            )}
+                        </div>
+                        <Button variant="ghost" size="icon" className="text-primary opacity-50" onClick={() => handleGroupClick(group.id)}>
+                            <ArrowRight className="h-6 w-6" />
+                            <span className="sr-only">Masuk Grup</span>
+                        </Button>
+                    </div>
 
-              <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
-                  <MessageCircle className="h-4 w-4 flex-shrink-0"/>
-                  <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
-                  <span className="text-xs shrink-0">
-                    {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
-                        ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: false, locale: id })
-                        .replace('kurang dari ', '')
-                        .replace('sekitar ', '')
-                        .replace('pada ', '')
-                        .replace('yang lalu ', '')
-                        : group.lastMessageTime || ""}
-                  </span>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </main>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
+                        <MessageCircle className="h-4 w-4 flex-shrink-0"/>
+                        <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
+                        <span className="text-xs shrink-0">
+                            {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
+                                ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: false, locale: id })
+                                .replace('kurang dari ', '')
+                                .replace('sekitar ', '')
+                                .replace('pada ', '')
+                                .replace('yang lalu ', '')
+                                : group.lastMessageTime || ""}
+                        </span>
+                    </div>
+                    </div>
+                </Card>
+                ))}
+            </main>
+        </div>
+        
+        {isSuperUser && (
+            <Button
+                size="icon"
+                className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+                onClick={() => setIsCreateGroupOpen(true)}
+            >
+                <Plus className="h-8 w-8" />
+                <span className="sr-only">Buat Grup Baru</span>
+            </Button>
+        )}
 
-      {isSuperUser && (
-        <Button
-            size="icon"
-            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-            onClick={() => setIsCreateGroupOpen(true)}
-        >
-            <Plus className="h-8 w-8" />
-            <span className="sr-only">Buat Grup Baru</span>
-        </Button>
-      )}
-
-       <CreateEditGroupDialog 
-         open={isCreateGroupOpen || !!editingGroup}
-         onOpenChange={(isOpen) => {
-             if (!isOpen) {
-                 setIsCreateGroupOpen(false);
-                 setEditingGroup(null);
-             }
-         }}
-         editingGroup={editingGroup}
-         onSubmit={onGroupSubmit}
-       />
+        <CreateEditGroupDialog 
+            open={isCreateGroupOpen || !!editingGroup}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                    setIsCreateGroupOpen(false);
+                    setEditingGroup(null);
+                }
+            }}
+            editingGroup={editingGroup}
+            onSubmit={onGroupSubmit}
+        />
     </div>
   );
 }
