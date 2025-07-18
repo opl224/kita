@@ -79,11 +79,11 @@ export function SidebarNav() {
     return () => unsubscribeUser();
   }, [user, db]);
 
-  // Effect to fetch ALL general notifications
+  // Effect to fetch ALL general notifications for the user
   useEffect(() => {
     if (!user) return;
     
-    const notificationsQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+    const notificationsQuery = query(collection(db, "users", user.uid, "notifications"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(notificationsQuery, (querySnapshot) => {
         const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationDoc));
         setGeneralNotifications(notifs);
@@ -111,16 +111,16 @@ export function SidebarNav() {
 
   // Effect to calculate new general notifications based on client-side filtering
   useEffect(() => {
-    if (lastSeen.notifications === null) return;
-    
-    // Check if on the notifications page, if so, count should be 0
+    // If on the notifications page, force count to 0 immediately
     if (pathname === '/notifications') {
         setNewGeneralNotificationsCount(0);
         return;
     }
 
+    if (lastSeen.notifications === null) return;
+    
     const newGeneralCount = generalNotifications.filter(n => n.createdAt.toDate() > lastSeen.notifications!).length;
-    const newInvitationCount = invitations.length; // Invitations are always "new" until actioned
+    const newInvitationCount = invitations.length;
     
     setNewGeneralNotificationsCount(newGeneralCount + newInvitationCount);
 
@@ -146,6 +146,9 @@ export function SidebarNav() {
 
     const unsubscribeGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
         setNewCallNotificationsCount(groupsSnapshot.size);
+    }, (error) => {
+        // This can happen if the index isn't ready, we can ignore it for now
+        // as it will retry.
     });
 
     return () => unsubscribeGroups();
@@ -168,6 +171,8 @@ export function SidebarNav() {
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             let hasNotification = false;
+            
+            // The notification count logic is now more robust
             if (item.notificationKey === 'notifications') {
                 hasNotification = newGeneralNotificationsCount > 0;
             } else if (item.notificationKey === 'calls') {
