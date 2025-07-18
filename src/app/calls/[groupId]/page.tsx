@@ -34,6 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { CustomLoader } from '@/components/layout/loader';
 
 export const dynamic = 'force-dynamic';
 
@@ -453,7 +454,7 @@ const startRecording = async () => {
     };
 
     if (loading) {
-        return <div className="flex items-center justify-center h-screen">Memuat obrolan...</div>;
+        return <CustomLoader />;
     }
 
     return (
@@ -597,5 +598,7 @@ const startRecording = async () => {
         </div>
     );
 }
+
+    
 
     

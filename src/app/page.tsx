@@ -16,6 +16,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CustomLoader } from "@/components/layout/loader";
+import { cn } from "@/lib/utils";
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -130,7 +132,7 @@ export default function Home() {
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
   
   if (loading) {
-    return <div>Memuat...</div>;
+    return <CustomLoader />;
   }
 
   return (
@@ -199,7 +201,7 @@ export default function Home() {
                                 className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
                                 onClick={() => setEditingUser(u)}
                               >
-                                  <Plus className="h-5 w-5 text-primary-foreground" />
+                                  <Plus className={cn("h-5 w-5 text-foreground dark:text-primary-foreground")} />
                               </Button>
                           </div>
                       ))}
@@ -241,3 +243,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
