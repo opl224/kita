@@ -20,18 +20,23 @@ export const menuItems = [
   { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
 
+type NotificationDoc = {
+    id: string;
+    createdAt: Timestamp;
+    [key: string]: any;
+};
+
 export function SidebarNav() {
   const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  
-  const [newGeneralNotifications, setNewGeneralNotifications] = useState(0);
-  const [newInvitations, setNewInvitations] = useState(0);
-  const [newCallNotifications, setNewCallNotifications] = useState(0);
-
-  const [notificationCounts, setNotificationCounts] = useState({ notifications: 0, calls: 0 });
-
   const [lastSeen, setLastSeen] = useState<{ notifications: Date | null, calls: Date | null }>({ notifications: null, calls: null });
   
+  const [allGeneralNotifications, setAllGeneralNotifications] = useState<NotificationDoc[]>([]);
+  const [allInvitations, setAllInvitations] = useState<NotificationDoc[]>([]);
+  const [newCallNotifications, setNewCallNotifications] = useState(0);
+  
+  const [notificationCounts, setNotificationCounts] = useState({ notifications: 0, calls: 0 });
+
   const db = getFirestore(app);
   const auth = getAuth(app);
 
@@ -39,11 +44,10 @@ export function SidebarNav() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
-        // Reset all states on logout
         setNotificationCounts({ notifications: 0, calls: 0 });
         setLastSeen({ notifications: null, calls: null });
-        setNewGeneralNotifications(0);
-        setNewInvitations(0);
+        setAllGeneralNotifications([]);
+        setAllInvitations([]);
         setNewCallNotifications(0);
       }
     });
@@ -63,24 +67,27 @@ export function SidebarNav() {
           calls: userData.lastSeenCalls?.toDate() || new Date(0)
         });
       }
+    }, (error) => {
+        console.error("Error listening to user document:", error);
     });
     
     return () => unsubscribeUser();
   }, [user, db]);
 
-  // Effect for new general notifications
+  // Effect to fetch ALL general notifications
   useEffect(() => {
-    if (!user || lastSeen.notifications === null) return;
+    if (!user) return;
     
-    const notificationsQuery = query(collection(db, "notifications"), where("createdAt", ">", lastSeen.notifications));
+    const notificationsQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(notificationsQuery, (querySnapshot) => {
-        setNewGeneralNotifications(querySnapshot.size);
+        const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationDoc));
+        setAllGeneralNotifications(notifs);
     });
 
     return () => unsubscribe();
-  }, [user, db, lastSeen.notifications]);
+  }, [user, db]);
 
-  // Effect for new invitations
+  // Effect to fetch ALL pending invitations
   useEffect(() => {
       if (!user) return;
 
@@ -90,11 +97,23 @@ export function SidebarNav() {
           where('status', '==', 'pending')
       );
       const unsubscribe = onSnapshot(invitationsQuery, (invitesSnapshot) => {
-          setNewInvitations(invitesSnapshot.size);
+          const invites = invitesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationDoc));
+          setAllInvitations(invites);
       });
 
       return () => unsubscribe();
   }, [user, db]);
+
+  // Effect to calculate new general notifications based on client-side filtering
+  useEffect(() => {
+    if (lastSeen.notifications === null) return;
+
+    const newGeneralCount = allGeneralNotifications.filter(n => n.createdAt.toDate() > lastSeen.notifications!).length;
+    const newInvitationCount = allInvitations.length; // Invitations are always "new" until actioned
+    
+    setNotificationCounts(prev => ({ ...prev, notifications: newGeneralCount + newInvitationCount }));
+
+  }, [allGeneralNotifications, allInvitations, lastSeen.notifications]);
 
 
   // Effect for new voice notes in groups
@@ -120,11 +139,8 @@ export function SidebarNav() {
 
   // Effect to combine notification counts
   useEffect(() => {
-    setNotificationCounts({
-      notifications: newGeneralNotifications + newInvitations,
-      calls: newCallNotifications
-    });
-  }, [newGeneralNotifications, newInvitations, newCallNotifications]);
+    setNotificationCounts(prev => ({...prev, calls: newCallNotifications}));
+  }, [newCallNotifications]);
 
 
   // Effect to clear call notifications when on the /calls page
