@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SWIPE_THRESHOLD = 50;
-const showLogoutDialogEvent = new Event('show-logout-dialog');
 
 const dialogState = {
   isOpen: false,
@@ -33,29 +32,29 @@ const dialogState = {
 
 export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolean) => void) {
   useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (dialogState.isOpen) {
+        event.preventDefault();
+        dialogState.close();
+      }
+    };
+
     if (isOpen) {
       window.history.pushState({ dialogOpen: true }, '');
-
       dialogState.isOpen = true;
       dialogState.close = () => onOpenChange(false);
-
-      const handlePopState = (event: PopStateEvent) => {
-        if (dialogState.isOpen) {
-          dialogState.close();
-          event.preventDefault();
-        }
-      };
-      
       window.addEventListener('popstate', handlePopState);
-      
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-        if (window.history.state?.dialogOpen) {
-          window.history.back();
-        }
-        dialogState.isOpen = false;
-      };
+    } else {
+      dialogState.isOpen = false;
     }
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (dialogState.isOpen && window.history.state?.dialogOpen) {
+        window.history.back();
+      }
+      dialogState.isOpen = false;
+    };
   }, [isOpen, onOpenChange]);
 }
 
@@ -97,23 +96,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
 
+  // Reset back press count whenever the page changes
+  useEffect(() => {
+    backPressCountRef.current = 0;
+  }, [pathname]);
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+        // Always prevent the default back navigation
         event.preventDefault();
-
+        
+        // Priority 1: If a dialog is open, let its own handler close it.
+        // The useDialogBackButton hook will handle closing it.
         if (dialogState.isOpen) {
             dialogState.close();
             return;
         }
 
-        const isRootPage = menuItems.some(item => item.href === pathname);
-        
-        if (!isRootPage) {
-            router.back();
-            return;
-        }
-
+        // Priority 2: "Press again to exit" logic
         backPressCountRef.current += 1;
         
         if (backPressCountRef.current === 1) {
@@ -124,21 +124,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             setTimeout(() => {
                 backPressCountRef.current = 0;
-            }, 2000);
+            }, 2000); // Reset after 2 seconds
         } else if (backPressCountRef.current === 2) {
             setIsLogoutDialogOpen(true);
-            backPressCountRef.current = 0; 
+            backPressCountRef.current = 0; // Reset after triggering dialog
         }
+        
+        // Re-push the state to capture the next back button press
+        window.history.pushState(null, '');
     };
     
-    // Add a history entry to capture the back button press
+    // Add a history entry to capture the back button press initially
     window.history.pushState(null, '');
     window.addEventListener('popstate', handlePopState);
     
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [router, pathname, toast]);
+  }, [toast]); // only toast is a dependency here
 
   async function handleLogout() {
     try {
