@@ -60,7 +60,7 @@ export default function Home() {
         const isOpank = currentUser.uid === superUserUid;
         setIsSuperUser(isOpank);
 
-        // Fetch user-specific data
+        // --- Common listeners for all users ---
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
@@ -68,7 +68,6 @@ export default function Home() {
           }
         });
 
-        // Listen to the central app state for total money collected
         const appStateRef = doc(db, "appState", "main");
         const unsubscribeAppState = onSnapshot(appStateRef, (docSnap) => {
           if (docSnap.exists()) {
@@ -76,29 +75,28 @@ export default function Home() {
           }
         });
 
-        // If super user, listen for all users and their feedback
+        // --- Listeners for SuperUser ONLY ---
+        let unsubscribeAllUsers: (() => void) | undefined;
         if (isOpank) {
           const usersCollection = collection(db, "users");
-          const unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
+          unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
             const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllUsers(usersList);
 
             const feedbackList = usersList.filter(u => u.hasGivenFeedback).map(u => u as Feedback);
             setUserFeedback(feedbackList);
           });
-          
-          setLoading(false);
-          return () => {
-            unsubscribeUser();
-            unsubscribeAllUsers();
-            unsubscribeAppState();
-          };
         }
         
         setLoading(false);
+
+        // --- Cleanup function ---
         return () => {
           unsubscribeUser();
           unsubscribeAppState();
+          if (unsubscribeAllUsers) {
+            unsubscribeAllUsers();
+          }
         };
 
       } else {
