@@ -398,7 +398,7 @@ export default function Home() {
               </CardHeader>
               <CardContent className="p-0">
                   <div className="space-y-4">
-                      {paginatedFeedbacks.map((f) => (
+                      {paginatedFeedbacks.length > 0 ? paginatedFeedbacks.map((f) => (
                           <div key={f.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
                               <div className="flex-1">
                                   <p className="font-semibold text-foreground">{f.displayName}</p>
@@ -409,7 +409,9 @@ export default function Home() {
                                   <ThumbsDown className="h-6 w-6 text-red-500" />
                               )}
                           </div>
-                      ))}
+                      )) : (
+                        <p className="text-muted-foreground text-center py-4">Belum ada penilaian.</p>
+                      )}
                   </div>
                   <PaginationControls 
                     currentPage={feedbackPage}
