@@ -21,7 +21,6 @@ import { Camera, Moon, Sun, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -56,7 +55,6 @@ const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-l
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
 function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackSubmit: (feedback: 'like' | 'dislike') => void }) {
-    // This hook prevents the user from using the back button to escape the dialog
     useDialogBackButton(open, () => {});
 
     return (
