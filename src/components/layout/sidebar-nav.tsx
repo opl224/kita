@@ -7,7 +7,7 @@ import { Home, AudioWaveform, Bell, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -23,8 +23,14 @@ export const menuItems = [
 export function SidebarNav() {
   const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  
+  const [newGeneralNotifications, setNewGeneralNotifications] = useState(0);
+  const [newInvitations, setNewInvitations] = useState(0);
+  const [newCallNotifications, setNewCallNotifications] = useState(0);
+
   const [notificationCounts, setNotificationCounts] = useState({ notifications: 0, calls: 0 });
-  const [lastSeen, setLastSeen] = useState<{ notifications: Date, calls: Date }>({ notifications: new Date(0), calls: new Date(0) });
+
+  const [lastSeen, setLastSeen] = useState<{ notifications: Date | null, calls: Date | null }>({ notifications: null, calls: null });
   
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -33,8 +39,12 @@ export function SidebarNav() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
+        // Reset all states on logout
         setNotificationCounts({ notifications: 0, calls: 0 });
-        setLastSeen({ notifications: new Date(0), calls: new Date(0) });
+        setLastSeen({ notifications: null, calls: null });
+        setNewGeneralNotifications(0);
+        setNewInvitations(0);
+        setNewCallNotifications(0);
       }
     });
     return () => unsubscribeAuth();
@@ -58,62 +68,63 @@ export function SidebarNav() {
     return () => unsubscribeUser();
   }, [user, db]);
 
-  // Effect to listen for new notifications and invitations
+  // Effect for new general notifications
   useEffect(() => {
-    if (!user) return;
-
-    // Listener for new general notifications
-    const notificationsQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
-    const unsubscribeNotifs = onSnapshot(notificationsQuery, (querySnapshot) => {
-      const newGeneralNotifsCount = querySnapshot.docs.filter(doc => {
-        const createdAt = doc.data().createdAt?.toDate();
-        return createdAt && createdAt > lastSeen.notifications;
-      }).length;
-      
-      // We combine counts inside the second listener to avoid race conditions
-      // Listener for new group invitations
-      const invitationsQuery = query(
-        collection(db, 'invitations'),
-        where('userId', '==', user.uid),
-        where('status', '==', 'pending')
-      );
-      const unsubscribeInvites = onSnapshot(invitationsQuery, (invitesSnapshot) => {
-        const newInvitesCount = invitesSnapshot.size;
-        setNotificationCounts(prev => ({ ...prev, notifications: newGeneralNotifsCount + newInvitesCount }));
-      });
-
-      return () => unsubscribeInvites();
+    if (!user || lastSeen.notifications === null) return;
+    
+    const notificationsQuery = query(collection(db, "notifications"), where("createdAt", ">", lastSeen.notifications));
+    const unsubscribe = onSnapshot(notificationsQuery, (querySnapshot) => {
+        setNewGeneralNotifications(querySnapshot.size);
     });
 
-    return () => unsubscribeNotifs();
+    return () => unsubscribe();
   }, [user, db, lastSeen.notifications]);
+
+  // Effect for new invitations
+  useEffect(() => {
+      if (!user) return;
+
+      const invitationsQuery = query(
+          collection(db, 'invitations'),
+          where('userId', '==', user.uid),
+          where('status', '==', 'pending')
+      );
+      const unsubscribe = onSnapshot(invitationsQuery, (invitesSnapshot) => {
+          setNewInvitations(invitesSnapshot.size);
+      });
+
+      return () => unsubscribe();
+  }, [user, db]);
 
 
   // Effect for new voice notes in groups
   useEffect(() => {
-    if (!user) return;
+    if (!user || lastSeen.calls === null) return;
     
     const groupsQuery = query(
       collection(db, 'groups'),
-      where('members', 'array-contains', user.uid)
+      where('members', 'array-contains', user.uid),
+      where('lastMessageTime', '>', lastSeen.calls)
     );
 
     const unsubscribeGroups = onSnapshot(groupsQuery, (groupsSnapshot) => {
-      let newMessagesCount = 0;
-      groupsSnapshot.forEach(groupDoc => {
-        const groupData = groupDoc.data();
-        const lastMessageTime = groupData.lastMessageTime?.toDate();
-        if (lastMessageTime && lastMessageTime > lastSeen.calls && groupData.lastMessage) {
-          if (pathname !== '/calls') {
-            newMessagesCount++;
-          }
+        if (pathname === '/calls') {
+          setNewCallNotifications(0);
+        } else {
+          setNewCallNotifications(groupsSnapshot.size);
         }
-      });
-      setNotificationCounts(prev => ({ ...prev, calls: newMessagesCount }));
     });
 
     return () => unsubscribeGroups();
   }, [user, db, lastSeen.calls, pathname]);
+
+  // Effect to combine notification counts
+  useEffect(() => {
+    setNotificationCounts({
+      notifications: newGeneralNotifications + newInvitations,
+      calls: newCallNotifications
+    });
+  }, [newGeneralNotifications, newInvitations, newCallNotifications]);
 
 
   // Effect to clear call notifications when on the /calls page
