@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -141,6 +141,8 @@ export default function Home() {
                 setUserData(data);
                 const userIsAdmin = !!data.isSuperUser;
                 setIsSuperUser(userIsAdmin);
+
+                 // This ensures the main admin user is always a super user
                  if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2" && !data.isSuperUser) {
                     await updateDoc(userDocRef, { isSuperUser: true });
                  }
@@ -262,9 +264,9 @@ export default function Home() {
 
     try {
         const userDocRef = doc(db, 'users', user.uid);
-        const feedbackDocRef = doc(collection(db, 'userFeedback'));
         
-        await setDoc(feedbackDocRef, {
+        const feedbackCollectionRef = collection(db, 'userFeedback');
+        await addDoc(feedbackCollectionRef, {
             userId: user.uid,
             userName: userData.displayName,
             feedback: feedback,
@@ -399,15 +401,16 @@ export default function Home() {
                                   <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
                                 </div>
                                 <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
-                                  <DialogTrigger asChild onClick={(e) => { e.stopPropagation(); }}>
-                                      <Button 
-                                        size="icon" 
-                                        className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-10"
-                                        onClick={() => setEditingUser(u)}
-                                      >
-                                          <Plus className="h-5 w-5 text-primary-foreground" />
-                                      </Button>
-                                  </DialogTrigger>
+                                  <Button 
+                                    size="icon" 
+                                    className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-10"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingUser(u);
+                                    }}
+                                  >
+                                      <Plus className="h-5 w-5 text-primary-foreground" />
+                                  </Button>
                                   <DialogContent>
                                       <DialogHeader>
                                       <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
@@ -489,7 +492,7 @@ export default function Home() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setIsLogoutDialogOpen(false)}>Batal</AlertDialogCancel>
                     <AlertDialogAction onClick={() => {
                       setIsLogoutDialogOpen(false);
                       auth.signOut();
