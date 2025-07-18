@@ -143,32 +143,29 @@ export default function Home() {
 
     let unsubscribeAllUsers: (() => void) | undefined;
     if (isSuperUser) {
-      const usersCollection = collection(db, "users");
-      unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAllUsers(usersList);
+        const usersCollection = collection(db, "users");
+        // For super-user, get all users for management. For others, this listener is skipped.
+        unsubscribeAllUsers = onSnapshot(usersCollection, (usersSnapshot) => {
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllUsers(usersList);
 
-        const feedbackList = usersList.filter(u => u.hasGivenFeedback && u.feedback).map(u => ({
-          id: u.id,
-          displayName: u.displayName,
-          avatarUrl: u.avatarUrl,
-          feedback: u.feedback
-        }));
-        setUserFeedback(feedbackList);
-      }, (error) => {
-        console.error("Error fetching all users:", error);
-      });
+            const feedbackList = usersList.filter(u => u.hasGivenFeedback && u.feedback).map(u => ({
+              id: u.id,
+              displayName: u.displayName,
+              avatarUrl: u.avatarUrl,
+              feedback: u.feedback
+            }));
+            setUserFeedback(feedbackList);
+        }, (error) => {
+            // This might fail if rules don't permit listing all users.
+            // A super-user flag should be checked in the rules.
+            console.error("Error fetching all users (ensure rules permit this for super-user):", error);
+        });
     } else {
-      setAllUsers([]);
-      setUserFeedback([]);
+        // Regular users do not fetch all users.
+        setAllUsers([]);
+        setUserFeedback([]);
     }
-
-    // Listener for back button press on home page
-    const handleShowLogoutDialog = () => {
-      setIsLogoutDialogOpen(true);
-    };
-    window.addEventListener('show-logout-dialog', handleShowLogoutDialog);
-
 
     return () => {
       unsubscribeUser();
@@ -176,7 +173,6 @@ export default function Home() {
       if (unsubscribeAllUsers) {
         unsubscribeAllUsers();
       }
-       window.removeEventListener('show-logout-dialog', handleShowLogoutDialog);
     };
   }, [user, isSuperUser, db]);
 
@@ -406,3 +402,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

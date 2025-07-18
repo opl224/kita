@@ -160,6 +160,7 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
                     alt="Pratinjau gambar"
                     layout="fill"
                     objectFit="contain"
+                    unoptimized
                   />
                   <Button 
                     size="icon" 
@@ -275,7 +276,7 @@ export default function PostPage() {
                       alt={`Postingan oleh ${post.userName}`}
                       layout="fill"
                       objectFit="cover"
-                      unoptimized // Since using Firebase Storage URL
+                      unoptimized
                     />
                 </div>
               </CardContent>
@@ -288,3 +289,5 @@ export default function PostPage() {
     </div>
   );
 }
+
+    
