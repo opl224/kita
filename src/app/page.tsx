@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
@@ -28,13 +28,6 @@ const moneyFormSchema = z.object({
 type MoneyFormValues = z.infer<typeof moneyFormSchema>;
 
 const ITEMS_PER_PAGE = 5;
-const SUPER_USER_UID = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
-
-type UserFeedback = {
-  id: string;
-  displayName: string;
-  feedback: 'like' | 'dislike';
-}
 
 const PaginationControls = ({ currentPage, totalPages, onPageChange, className }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void, className?: string }) => {
   if (totalPages <= 1) return null;
@@ -75,14 +68,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [userFeedbacks, setUserFeedbacks] = useState<UserFeedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [myTotalLikes, setMyTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
   const router = useRouter();
 
   const [allUsersPage, setAllUsersPage] = useState(1);
-  const [feedbackPage, setFeedbackPage] = useState(1);
   
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
@@ -127,18 +118,9 @@ export default function Home() {
     const userUnsubscribe = onSnapshot(userDocRef, async (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-
-            // Ensure super user status is correctly set in Firestore
-            if (user.uid === SUPER_USER_UID && !data.isSuperUser) {
-              await updateDoc(userDocRef, { isSuperUser: true });
-              // The snapshot listener will re-trigger with the updated data.
-              return;
-            }
-
             setUserData(data);
             const userIsAdmin = !!data.isSuperUser;
             setIsSuperUser(userIsAdmin);
-
         }
         setLoading(false);
     });
@@ -174,7 +156,6 @@ export default function Home() {
   useEffect(() => {
     if (!isSuperUser) {
         setAllUsers([]);
-        setUserFeedbacks([]);
         return;
     }
     
@@ -198,11 +179,6 @@ export default function Home() {
                 totalLikes: likesCountByUser[u.id] || 0
             }));
             setAllUsers(usersWithLikes);
-
-            const feedbackList = usersList
-                .filter(u => u.hasGivenFeedback === true && u.feedback)
-                .map(u => ({ id: u.id, displayName: u.displayName, feedback: u.feedback }));
-            setUserFeedbacks(feedbackList);
         });
 
         // Cleanup posts listener when users listener re-runs
@@ -263,9 +239,6 @@ export default function Home() {
 
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
-
-  const totalFeedbackPages = Math.ceil(userFeedbacks.length / ITEMS_PER_PAGE);
-  const paginatedFeedbacks = userFeedbacks.slice((feedbackPage - 1) * ITEMS_PER_PAGE, feedbackPage * ITEMS_PER_PAGE);
   
   if (loading) {
     return <CustomLoader />;
@@ -329,7 +302,6 @@ export default function Home() {
 
         <aside className="flex flex-col gap-8">
            {isSuperUser && (
-            <>
             <Card className={`${neumorphicCardStyle} p-6`}>
               <CardHeader className="p-0 mb-4">
                   <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
@@ -400,39 +372,6 @@ export default function Home() {
                   />
               </CardContent>
             </Card>
-
-            <Card className={`${neumorphicCardStyle} p-6`}>
-              <CardHeader className="p-0 mb-4">
-                  <CardTitle className="text-xl font-headline font-semibold flex items-center gap-2 text-foreground">
-                    <Users className="h-6 w-6"/>
-                    Penilaian Pengguna
-                  </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                  <div className="space-y-4">
-                      {paginatedFeedbacks.length > 0 ? paginatedFeedbacks.map((f) => (
-                          <div key={f.id} className="flex items-center gap-4 p-3 rounded-lg bg-background shadow-neumorphic-inset">
-                              <div className="flex-1">
-                                  <p className="font-semibold text-foreground">{f.displayName}</p>
-                              </div>
-                              {f.feedback === 'like' ? (
-                                  <ThumbsUp className="h-6 w-6 text-green-500" />
-                              ) : (
-                                  <ThumbsDown className="h-6 w-6 text-red-500" />
-                              )}
-                          </div>
-                      )) : (
-                        <p className="text-muted-foreground text-center py-4">Belum ada penilaian.</p>
-                      )}
-                  </div>
-                  <PaginationControls 
-                    currentPage={feedbackPage}
-                    totalPages={totalFeedbackPages}
-                    onPageChange={setFeedbackPage}
-                  />
-              </CardContent>
-            </Card>
-            </>
           )}
         </aside>
       </main>
@@ -455,5 +394,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

@@ -17,16 +17,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Camera, Moon, Sun, ThumbsUp, ThumbsDown, Info } from "lucide-react";
+import { Camera, Moon, Sun, Info } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
 
@@ -46,46 +38,11 @@ type UserProfileData = {
     displayName: string;
     email: string;
     avatarUrl: string;
-    hasGivenFeedback?: boolean;
-    feedback?: 'like' | 'dislike';
 };
 
 const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
-
-function FeedbackDialog({ open, onFeedbackSubmit }: { open: boolean, onFeedbackSubmit: (feedback: 'like' | 'dislike') => void }) {
-    useDialogBackButton(open, () => {});
-
-    return (
-        <AlertDialog open={open}>
-            <AlertDialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="text-center text-xl font-headline">Kasih Nilai!</AlertDialogTitle>
-                    <AlertDialogDescription className="text-center">Bagaimana pengalaman Anda menggunakan aplikasi ini?</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-row items-center justify-center gap-8 pt-4">
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => onFeedbackSubmit('like')}
-                    >
-                        <ThumbsUp className="h-10 w-10 text-green-500" />
-                    </Button>
-                    <Button 
-                        size="icon" 
-                        variant="ghost"
-                        className="h-20 w-20 rounded-full shadow-neumorphic-outset active:shadow-neumorphic-inset"
-                        onClick={() => onFeedbackSubmit('dislike')}
-                    >
-                        <ThumbsDown className="h-10 w-10 text-red-500" />
-                    </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
 
 
 export default function ProfilePage() {
@@ -174,19 +131,6 @@ export default function ProfilePage() {
         setIsUploading(false);
     };
   };
-
-  async function handleFeedback(feedback: 'like' | 'dislike') {
-    if (!user) return;
-    try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-            feedback: feedback,
-            hasGivenFeedback: true
-        });
-    } catch (error) {
-        console.error("Error submitting feedback:", error);
-    }
-  }
 
   async function onSubmit(data: ProfileFormValues) {
     if (!user) return;
@@ -361,11 +305,6 @@ export default function ProfilePage() {
           Keluar
         </Button>
       </div>
-
-       <FeedbackDialog 
-         open={userData.hasGivenFeedback === false}
-         onFeedbackSubmit={handleFeedback}
-       />
     </div>
   );
 }
