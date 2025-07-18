@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Plus, ThumbsUp, ThumbsDown, MessageSquareQuote } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -18,6 +18,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
+
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -42,11 +45,14 @@ export default function Home() {
   const [userFeedback, setUserFeedback] = useState<Feedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const router = useRouter();
   
   // State for Avatar Dialog
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
 
+  // State for Logout Dialog
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -121,12 +127,20 @@ export default function Home() {
       setUserFeedback([]);
     }
 
+    // Listener for back button press on home page
+    const handleShowLogoutDialog = () => {
+      setIsLogoutDialogOpen(true);
+    };
+    window.addEventListener('show-logout-dialog', handleShowLogoutDialog);
+
+
     return () => {
       unsubscribeUser();
       unsubscribeAppState();
       if (unsubscribeAllUsers) {
         unsubscribeAllUsers();
       }
+       window.removeEventListener('show-logout-dialog', handleShowLogoutDialog);
     };
   }, [user, isSuperUser, db]);
 
@@ -164,6 +178,15 @@ export default function Home() {
        console.error("Error adding money:", error);
     }
   };
+
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  }
 
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
@@ -311,6 +334,22 @@ export default function Home() {
           )}
         </aside>
       </main>
+
+        <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Apakah Anda yakin ingin keluar dari aplikasi? Anda akan dikembalikan ke halaman login.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>Keluar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
     </div>
   );
 }

@@ -13,6 +13,7 @@ import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
 
 const SWIPE_THRESHOLD = 50; // Jarak minimum dalam piksel untuk dianggap sebagai swipe
+const showLogoutDialogEvent = new Event('show-logout-dialog');
 
 // Helper untuk mengelola state dialog untuk tombol kembali
 const dialogState = {
@@ -83,15 +84,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [auth, router, isAuthRequired, isAuthPage]);
 
-  // Handle Android back button
+  // Handle custom back button logic
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // 1. Prioritaskan menutup dialog yang terbuka
       if (dialogState.isOpen) {
         dialogState.close();
         event.preventDefault();
         return;
       }
-      // Biarkan browser menangani navigasi kembali jika tidak ada dialog yang terbuka
+
+      const currentPath = window.location.pathname;
+      const nonHomePages = ['/calls', '/notifications', '/profile'];
+      
+      // 2. Jika di halaman profil, notif, atau panggilan, kembali ke beranda
+      if (nonHomePages.includes(currentPath)) {
+        event.preventDefault();
+        router.push('/');
+        return;
+      }
+      
+      // 3. Jika di halaman beranda, tampilkan dialog keluar
+      if (currentPath === '/') {
+         event.preventDefault();
+         window.dispatchEvent(showLogoutDialogEvent);
+         return;
+      }
+      
+      // 4. Perilaku default untuk halaman lain (seperti halaman grup chat)
+      // Biarkan browser menangani navigasi kembali
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -99,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [router]);
 
 
   const handleTouchStart = (e: TouchEvent) => {
