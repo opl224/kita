@@ -7,7 +7,7 @@ import { Home, Phone, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -41,8 +41,6 @@ export function SidebarNav() {
       return;
     }
 
-    // Temporarily disabled due to permission issues causing app instability.
-    // This logic needs to be revisited with more robust security rules.
     const setupNotificationListener = async () => {
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -57,6 +55,9 @@ export function SidebarNav() {
 
         const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
           setTotalUnseenCount(snapshot.size); // Only count pending invitations for now
+        }, (error) => {
+            console.error("Error in invitations snapshot listener:", error);
+            // Optionally, handle the error state in the UI
         });
 
         return () => {
@@ -67,10 +68,10 @@ export function SidebarNav() {
       }
     };
 
-    const unsubscribe = setupNotificationListener();
+    const unsubscribePromise = setupNotificationListener();
 
     return () => {
-      unsubscribe.then(unsub => unsub && unsub());
+      unsubscribePromise?.then(unsub => unsub && unsub());
     };
   }, [db, user]);
 
