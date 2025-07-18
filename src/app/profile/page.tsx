@@ -191,99 +191,104 @@ export default function ProfilePage() {
         </Button>
       </header>
 
-      <Card className={neumorphicCardStyle}>
-        <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="relative">
-            <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
-              <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
-              <AvatarFallback className="rounded-full">{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleAvatarChange} 
-                className="hidden" 
-                accept="image/*"
-            />
-            <Button 
-                size="icon" 
-                className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full`}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-            >
-                {isUploading ? <Loader className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5"/>}
-                <span className="sr-only">Ubah Avatar</span>
-            </Button>
-          </div>
-          <h2 className="text-2xl font-headline font-semibold text-foreground">{form.getValues('displayName')}</h2>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground">Nama Tampilan</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nama tampilan Anda" {...field} className={neumorphicInputStyle} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground">Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Email Anda" {...field} className={neumorphicInputStyle} readOnly />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground">Kata Sandi Baru</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="•••••••• " {...field} className={neumorphicInputStyle} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground">Konfirmasi Kata Sandi</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button type="submit" variant="default" className={`${neumorphicButtonStyle} flex-1`}>
-                Simpan Perubahan
-              </Button>
-              <Button type="button" variant="secondary" onClick={handleLogout} className={`${neumorphicButtonStyle} flex-1`}>
-                <LogOut className="mr-2 h-5 w-5" />
-                Keluar
+      <div className="flex flex-col gap-6">
+        <Card className={neumorphicCardStyle}>
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <div className="relative">
+              <Avatar className="h-32 w-32 shadow-neumorphic-outset border-none rounded-full">
+                <AvatarImage src={avatarUrl} alt="User Avatar" data-ai-hint="user avatar" className="object-cover rounded-full" />
+                <AvatarFallback className="rounded-full">{form.getValues('displayName')?.charAt(0) || 'U'}</AvatarFallback>
+              </Avatar>
+              <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarChange} 
+                  className="hidden" 
+                  accept="image/*"
+              />
+              <Button 
+                  size="icon" 
+                  className={`${neumorphicButtonStyle} absolute bottom-0 right-0 w-10 h-10 rounded-full`}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+              >
+                  {isUploading ? <Loader className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5"/>}
+                  <span className="sr-only">Ubah Avatar</span>
               </Button>
             </div>
-          </form>
-        </Form>
-      </Card>
+            <h2 className="text-2xl font-headline font-semibold text-foreground">{form.getValues('displayName')}</h2>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Nama Tampilan</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nama tampilan Anda" {...field} className={neumorphicInputStyle} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Email Anda" {...field} className={neumorphicInputStyle} readOnly />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Kata Sandi Baru</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="•••••••• " {...field} className={neumorphicInputStyle} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Konfirmasi Kata Sandi</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} className={neumorphicInputStyle} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="pt-4">
+                <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full`}>
+                  Simpan Perubahan
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </Card>
+
+        <Button type="button" variant="destructive" onClick={handleLogout} className={`${neumorphicButtonStyle} w-full`}>
+            <LogOut className="mr-2 h-5 w-5" />
+            Keluar
+        </Button>
+      </div>
     </div>
   );
 }
+
+    
