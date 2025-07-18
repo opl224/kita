@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!user && isAuthRequired) {
-    return <LoginPage />;
+    return <CustomLoader />;
   }
 
   if (isAuthPage) {
