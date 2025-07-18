@@ -78,7 +78,7 @@ export default function NotificationsPage() {
         setLoading(false);
     });
 
-    // Fetch pending invitations
+    // Fetch pending invitations for the current user
     const inviteQuery = query(
         collection(db, "invitations"),
         where("userId", "==", user.uid),
