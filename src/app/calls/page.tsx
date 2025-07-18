@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, writeBatch, updateDoc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +20,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { CustomLoader } from "@/components/layout/loader";
 import { useDialogBackButton } from "@/components/layout/app-shell";
 
 const groupFormSchema = z.object({
@@ -57,6 +56,11 @@ export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubm
     }
   }, [editingGroup, form, open]);
 
+  const handleSubmit = (data: GroupFormValues) => {
+      onSubmit(data);
+      onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -64,7 +68,7 @@ export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubm
                 <DialogTitle>{editingGroup ? 'Ubah Nama Grup' : 'Buat Grup Baru'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                     <FormField
                         control={form.control}
                         name="name"
@@ -92,6 +96,7 @@ export default function VoiceNoteGroupsPage() {
   const [isSuperUser, setIsSuperUser] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
@@ -112,11 +117,12 @@ export default function VoiceNoteGroupsPage() {
         } else {
             setUser(null);
             setIsSuperUser(false);
+            router.push('/login');
         }
     });
 
     return () => unsubscribeAuth();
-  }, [auth, db]);
+  }, [auth, db, router]);
 
   useEffect(() => {
     if (!user) {
@@ -222,10 +228,19 @@ export default function VoiceNoteGroupsPage() {
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50">
-      <header>
+      <header className="flex justify-between items-center">
         <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Pesan Suara Grup
         </h1>
+        {isSuperUser && (
+             <Button
+              className="shadow-neumorphic-outset active:shadow-neumorphic-inset"
+              onClick={() => setIsCreateGroupOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Buat Grup
+            </Button>
+        )}
       </header>
 
       <main className="space-y-6 pb-24">
@@ -236,13 +251,9 @@ export default function VoiceNoteGroupsPage() {
                 <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
                  {(isSuperUser || user?.uid === group.createdBy) && (
                   <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
-                    <Dialog open={editingGroup?.id === group.id} onOpenChange={(isOpen) => isOpen ? setEditingGroup(group) : setEditingGroup(null)}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingGroup(group)}>
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                    </Dialog>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
                     <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
                       <AlertDialogTrigger asChild>
                           <Button 
@@ -310,11 +321,18 @@ export default function VoiceNoteGroupsPage() {
       </main>
 
        <CreateEditGroupDialog 
-         open={!!editingGroup}
-         onOpenChange={(isOpen) => !isOpen && setEditingGroup(null)}
+         open={isCreateGroupOpen || !!editingGroup}
+         onOpenChange={(isOpen) => {
+             if (!isOpen) {
+                 setIsCreateGroupOpen(false);
+                 setEditingGroup(null);
+             }
+         }}
          editingGroup={editingGroup}
          onSubmit={onGroupSubmit}
        />
     </div>
   );
 }
+
+    

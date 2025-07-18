@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
 import {
   AlertDialog,
@@ -24,7 +23,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '../ui/button';
 import { CreatePostDialog } from '@/app/post/page';
-import { CreateEditGroupDialog } from '@/app/calls/page';
 
 const SWIPE_THRESHOLD = 50;
 
@@ -43,19 +41,21 @@ export function useDialogBackButton(isOpen: boolean, onOpenChange: (open: boolea
     };
 
     if (isOpen) {
-      window.history.pushState({ dialogOpen: true }, '');
+      if (!dialogState.isOpen) {
+        window.history.pushState({ dialogOpen: true }, '');
+      }
       dialogState.isOpen = true;
       dialogState.close = () => onOpenChange(false);
       window.addEventListener('popstate', handlePopState);
     } else {
-      dialogState.isOpen = false;
+       if (dialogState.isOpen) {
+         window.history.back();
+       }
+       dialogState.isOpen = false;
     }
     
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (dialogState.isOpen && window.history.state?.dialogOpen) {
-        window.history.back();
-      }
       dialogState.isOpen = false;
     };
   }, [isOpen, onOpenChange]);
@@ -70,16 +70,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const [user, setUser] = useState<User | null>(null);
-  const [isSuperUser, setIsSuperUser] = useState(false);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
-  const db = getFirestore(app);
   const backPressCountRef = useRef(0);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   // FAB Dialog States
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isAuthRequired = !isAuthPage;
@@ -88,19 +85,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            setIsSuperUser(!!userDocSnap.data().isSuperUser);
-        }
-      } else {
-        setIsSuperUser(false);
-      }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth, db]);
+  }, [auth]);
 
   useEffect(() => {
     if (loading) return;
@@ -197,8 +185,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const showPostFab = user && pathname === '/post';
-  const showCallsFab = user && isSuperUser && pathname === '/calls';
-
 
   if (loading || isMobile === undefined) {
     return <CustomLoader />;
@@ -242,42 +228,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {user && !isGroupChatPage && <SidebarNav />}
 
       {showPostFab && (
-          <>
-            <Button
-              size="icon"
-              className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-              onClick={() => setIsCreatePostOpen(true)}
-            >
-              <Plus className="h-8 w-8" />
-              <span className="sr-only">Buat Postingan Baru</span>
-            </Button>
-            <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
-          </>
+          <Button
+            size="icon"
+            className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
+            onClick={() => setIsCreatePostOpen(true)}
+          >
+            <Plus className="h-8 w-8" />
+            <span className="sr-only">Buat Postingan Baru</span>
+          </Button>
       )}
 
-      {showCallsFab && (
-        <>
-            <Button
-              size="icon"
-              className="fixed bottom-24 right-4 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all z-20"
-              onClick={() => setIsCreateGroupOpen(true)}
-            >
-              <Plus className="h-8 w-8" />
-              <span className="sr-only">Buat Grup Baru</span>
-            </Button>
-            {/* The CreateEditGroupDialog needs to be available to be opened. We'll pass a dummy onSubmit because AppShell doesn't know how to handle it, the page itself does. This is a simplification. */}
-            <CreateEditGroupDialog 
-              open={isCreateGroupOpen} 
-              onOpenChange={setIsCreateGroupOpen} 
-              editingGroup={null}
-              onSubmit={() => {
-                // In a real app, this logic would be passed down via context or another state management solution.
-                // For now, we assume the page will handle the submission and closing.
-                setIsCreateGroupOpen(false); 
-              }}
-            />
-        </>
-      )}
+      {/* Dialogs controlled by AppShell */}
+      <CreatePostDialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} user={user} />
 
 
       <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
@@ -297,3 +259,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    
