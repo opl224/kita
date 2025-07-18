@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, AudioWaveform, Bell, User } from 'lucide-react';
+import { Home, AudioWaveform, Bell, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
@@ -15,6 +15,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 export const menuItems = [
   { href: '/', label: 'Beranda', icon: Home, notificationKey: '' },
   { href: '/calls', label: 'VN', icon: AudioWaveform, notificationKey: 'calls' },
+  { href: '/post', label: 'Postingan', icon: Plus, notificationKey: '' },
   { href: '/notifications', label: 'Notifikasi', icon: Bell, notificationKey: 'notifications' },
   { href: '/profile', label: 'Profil', icon: User, notificationKey: '' },
 ];
