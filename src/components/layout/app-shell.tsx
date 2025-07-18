@@ -11,7 +11,6 @@ import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import LoginPage from '@/app/login/page';
 import { CustomLoader } from './loader';
-import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +68,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
-  const { toast } = useToast();
   const backPressCountRef = useRef(0);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   
@@ -117,11 +115,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         backPressCountRef.current += 1;
         
         if (backPressCountRef.current === 1) {
-            toast({
-                description: "Tekan sekali lagi untuk keluar.",
-                duration: 2000,
-            });
-
             setTimeout(() => {
                 backPressCountRef.current = 0;
             }, 2000); // Reset after 2 seconds
@@ -141,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [toast]); // only toast is a dependency here
+  }, []); 
 
   async function handleLogout() {
     try {

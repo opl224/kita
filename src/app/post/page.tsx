@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -53,7 +52,6 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
   const [base64Image, setBase64Image] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
   const db = getFirestore(app);
   
   useDialogBackButton(open, onOpenChange);
@@ -78,7 +76,7 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
       };
       reader.readAsDataURL(file);
       reader.onerror = (error) => {
-        toast({ variant: "destructive", title: "Gagal memproses gambar." });
+        console.error("Error processing image:", error);
       };
     }
   };
@@ -107,13 +105,11 @@ function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, onOpenC
         likes: [],
       });
       
-      toast({ title: 'Postingan berhasil dibuat!' });
       onOpenChange(false);
       resetForm();
 
     } catch (error) {
       console.error("Error creating post:", error);
-      toast({ variant: "destructive", title: 'Gagal membuat postingan.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -218,7 +214,6 @@ export default function PostPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
 
-  const { toast } = useToast();
   const db = getFirestore(app);
   const auth = getAuth(app);
   
@@ -285,11 +280,9 @@ export default function PostPage() {
       const postRef = doc(db, 'posts', editingPost.id);
       try {
           await updateDoc(postRef, { caption: data.caption });
-          toast({ title: "Keterangan berhasil diperbarui." });
           setEditingPost(null);
       } catch (error) {
           console.error("Error updating caption:", error);
-          toast({ variant: "destructive", title: "Gagal memperbarui keterangan." });
       }
   };
 
@@ -297,11 +290,9 @@ export default function PostPage() {
       if (!deletingPost) return;
       try {
           await deleteDoc(doc(db, 'posts', deletingPost.id));
-          toast({ title: "Postingan berhasil dihapus." });
           setDeletingPost(null);
       } catch (error) {
           console.error("Error deleting post:", error);
-          toast({ variant: "destructive", title: "Gagal menghapus postingan." });
       }
   };
 
