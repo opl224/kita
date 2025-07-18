@@ -194,7 +194,11 @@ export default function Home() {
                                   <p className="font-semibold text-foreground">{u.displayName}</p>
                                   <p className="text-sm text-muted-foreground">{u.email}</p>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
+                              <Button 
+                                size="icon" 
+                                className="rounded-full w-10 h-10 shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all"
+                                onClick={() => setEditingUser(u)}
+                              >
                                   <Plus className="h-5 w-5 text-primary" />
                               </Button>
                           </div>
