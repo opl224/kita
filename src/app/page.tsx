@@ -358,8 +358,12 @@ export default function Home() {
       <header className="flex justify-between items-center relative">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
-          <h1 className="text-3xl font-headline font-bold text-foreground">
-            {userData?.displayName || 'Pengguna'} {isSuperUser && "👑"}
+          <h1 className="text-3xl font-headline font-bold text-foreground flex items-center gap-2">
+            {userData?.displayName || 'Pengguna'}
+            {isSuperUser && "👑"}
+            {!isSuperUser && (userData?.likedBy?.length ?? 0) > 0 && (
+                <BadgeCheck className="h-6 w-6 text-blue-500" />
+            )}
           </h1>
         </div>
         <div className="flex items-center gap-4">
