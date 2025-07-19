@@ -552,7 +552,6 @@ export default function Home() {
                                         <p className="text-xs text-muted-foreground">
                                           {feedback.createdAt ? formatDistanceToNow(feedback.createdAt.toDate(), { addSuffix: false, locale: id })
                                           .replace('kurang dari ', '')
-                                          .replace('sekitar ', '')
                                           .replace('pada ', '')
                                           .replace('yang lalu ', '')
                                           : 'baru saja'}
