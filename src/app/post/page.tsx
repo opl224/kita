@@ -25,6 +25,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 type Post = {
   id: string;
@@ -61,6 +62,7 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const app = getFirebaseApp();
   const db = getFirestore(app);
+  const { toast } = useToast();
   
   useDialogBackButton(open, onOpenChange);
 
@@ -76,6 +78,20 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      const MAX_SIZE = 700 * 1024; // 700KB
+      if (file.size > MAX_SIZE) {
+        toast({
+          variant: 'destructive',
+          title: 'Ukuran Gambar Terlalu Besar',
+          description: 'Maksimal upload gambar 700KB.',
+        });
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const previewUrl = e.target?.result as string;
@@ -138,13 +154,16 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
               <DialogTitle>Buat Postingan Baru</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <Textarea
-                placeholder="Tulis keterangan..."
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                className="h-24 resize-none bg-background rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary border-none"
-                disabled={isSubmitting}
-              />
+              <div>
+                <Textarea
+                  placeholder="Tulis keterangan..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  className="h-24 resize-none bg-background rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary border-none"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-muted-foreground mt-2 text-right">Maksimal 700KB.</p>
+              </div>
 
               <Input
                 type="file"
@@ -536,3 +555,5 @@ export default function PostPage() {
     </div>
   );
 }
+
+    
