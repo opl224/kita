@@ -36,7 +36,9 @@ const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset 
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
-const SUPER_USER_UID = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
+const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
+// vopA2wSkuDOqt2AUOPIvOdCMtAg2
+// c3iJXsgRfdgvmzVtsSwefsmJ3pI2
 
 export default function SignupPage() {
   const router = useRouter();

@@ -1,20 +1,105 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // Helper function to check if a user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if the user is a super user
+    function isSuperUser() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+    }
+
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth.uid == userId;
+      // Any authenticated user can create their own user document (on signup)
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Any authenticated user can read public info (displayName, avatarUrl) from other users.
+      // Only the user themselves or a super user can read their full document.
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || isSuperUser()
+      );
+      
+      // Allow any signed-in user to read basic user info needed for UI elements
+      allow get: if isSignedIn();
+
+      // Only the user themselves can update their own profile data.
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      
+      // No one can delete user documents for now.
+      allow delete: if false;
+
+      // Rules for the notifications subcollection
+      match /notifications/{notificationId} {
+        // Only the owner of the notifications can read them.
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        // Only a super user can create a notification for a user (e.g., adding money).
+        allow create: if isSuperUser();
+        // Notifications are immutable once created.
+        allow update, delete: if false;
+      }
+    }
+
+    match /appState/{state} {
+      // Only super users can read and write to the app state (like total money collected)
+      allow read, write: if isSuperUser();
+    }
+    
+    match /posts/{postId} {
+      // Any signed-in user can read all posts.
+      allow read: if isSignedIn();
+      // Any signed-in user can create a post.
+      allow create: if isSignedIn();
+      // Users can only update/delete their own posts.
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    match /userFeedback/{feedbackId} {
+        // Any signed-in user can provide feedback.
+        allow create: if isSignedIn();
+        // Only super users can read feedback.
+        allow read: if isSuperUser();
+        // Feedback is immutable.
+        allow update, delete: if false;
     }
 
     match /groups/{groupId} {
-      allow get, list, create, update: if request.auth != null;
+        // A group can only be read by its members.
+        allow get: if isSignedIn() && resource.data.members.hasAny([request.auth.uid]);
+        allow list: if isSignedIn(); // Allow listing groups user is a member of.
 
-      match /messages/{messageId} {
-        // Izinkan semua pengguna yang terautentikasi untuk membaca dan menulis pesan
-        // untuk menyederhanakan izin dan memperbaiki masalah kondisi "balapan".
-        allow read, create: if request.auth != null;
-      }
+        // Only super users can create groups.
+        allow create: if isSuperUser();
+
+        // Group name can be updated by the creator or a super user.
+        // Members array can be updated (e.g., accepting an invite).
+        // lastMessage/Time can be updated by any member.
+        allow update: if isSignedIn() && resource.data.members.hasAny([request.auth.uid]);
+
+        // Group can be deleted by creator or super user.
+        allow delete: if isSignedIn() && (resource.data.createdBy == request.auth.uid || isSuperUser());
+
+        match /messages/{messageId} {
+            // Messages can be read by group members.
+            allow read: if isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+            // Messages can be created by group members.
+            allow create: if isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+            // A message can only be deleted by its sender.
+            allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+        }
+    }
+    
+    match /invitations/{invitationId} {
+        // A user can read an invitation addressed to them. Super users can read all.
+        allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isSuperUser());
+        // Only super users can create invitations.
+        allow create: if isSuperUser();
+        // A user can update the status of their own invitation (accept/reject).
+        allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

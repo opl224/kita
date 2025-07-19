@@ -138,9 +138,12 @@ export default function Home() {
                 setUserData(data);
                 const userIsAdmin = !!data.isSuperUser;
                 setIsSuperUser(userIsAdmin);
-                 if (user.uid === "c3iJXsgRfdgvmzVtsSwefsmJ3pI2" && !data.isSuperUser) {
+                 if (user.uid === "vopA2wSkuDOqt2AUOPIvOdCMtAg2" && !data.isSuperUser) {
                     await updateDoc(userDocRef, { isSuperUser: true });
                  }
+                // vopA2wSkuDOqt2AUOPIvOdCMtAg2
+                // c3iJXsgRfdgvmzVtsSwefsmJ3pI2
+
             }
         });
 
