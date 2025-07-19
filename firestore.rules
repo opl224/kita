@@ -1,65 +1,75 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
     function isSuperUser() {
-      // Check if the user document exists and the isSuperUser field is true.
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+      // Check if the user document exists and has the isSuperUser flag set to true.
+      // This prevents errors if the document doesn't exist yet during initial checks.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
     }
 
     match /users/{userId} {
-      // Allow user to read and write their own document
-      allow read, update: if request.auth.uid == userId;
-      // Allow logged-in users to read public-facing data of other users
-      allow get: if request.auth.uid != null;
+      // Allow user creation if the authenticated user's ID matches the document ID being created.
+      // This is crucial for the sign-up process.
+      allow create: if request.auth.uid == userId;
+
+      // Allow authenticated users to read basic user info.
+      // Explicitly deny listing all users to non-superusers to protect privacy.
+      allow get: if request.auth != null;
+      allow list: if isSuperUser();
+      
+      // Allow users to update their own profile, or superusers to update any profile.
+      allow update: if request.auth.uid == userId || isSuperUser();
     }
 
-    // Notifications are now a sub-collection of users
     match /users/{userId}/notifications/{notificationId} {
-      // Allow the user themselves or a superuser to read notifications.
-      // Only the target user can write (this is handled by the cloud function/backend logic that creates notifications).
-      allow read: if request.auth.uid == userId || isSuperUser();
-      allow write: if isSuperUser(); // Allow superuser to create notifications (e.g., adding money)
+        // Allow users to read their own notifications, or superusers to read any.
+        allow read: if request.auth.uid == userId || isSuperUser();
+        // Allow users to write to their own notifications subcollection, or superusers to write to any.
+        allow write: if request.auth.uid == userId || isSuperUser();
     }
-    
+
     match /appState/{state} {
-      allow read: if request.auth.uid != null;
+      allow read: if request.auth != null;
       allow write: if isSuperUser();
     }
-
-    match /posts/{postId} {
-      allow read, create: if request.auth.uid != null;
-      allow update, delete: if resource.data.userId == request.auth.uid;
-    }
     
+    match /posts/{postId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+
     match /userFeedback/{feedbackId} {
-      allow create: if request.auth.uid != null;
+      allow create: if request.auth != null;
       allow read: if isSuperUser();
     }
-
+    
     match /groups/{groupId} {
-      // Allow members to get the group document.
-      allow get: if resource.data.members.hasAny([request.auth.uid]);
-      // Allow any authenticated user to list groups they are a member of.
-      allow list: if request.auth.uid != null && request.auth.uid in resource.data.members;
-      allow create: if request.auth.uid != null;
-      allow update: if request.auth.uid == resource.data.createdBy || isSuperUser();
-      allow delete: if request.auth.uid == resource.data.createdBy || isSuperUser();
-
-      match /messages/{messageId} {
-        allow read, create: if exists(/databases/$(database)/documents/groups/$(groupId)) &&
-                              get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
-        allow delete: if exists(/databases/$(database)/documents/groups/$(groupId)) &&
-                       get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]) &&
-                       resource.data.senderId == request.auth.uid;
-      }
+      // Allow reading group info only if the user is a member.
+      allow read: if request.auth.uid in resource.data.members;
+      // Allow authenticated users to create new groups.
+      allow create: if request.auth != null;
+      // Allow updates/deletes only by the group creator or a superuser.
+      allow update, delete: if request.auth.uid == resource.data.createdBy || isSuperUser();
+    }
+    
+    match /groups/{groupId}/messages/{messageId} {
+      // Allow reading/creating messages only if the user is a member of the group.
+      allow read, create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+      // Allow deleting a message only if the user is the sender.
+      allow delete: if request.auth.uid == resource.data.senderId;
     }
     
     match /invitations/{invitationId} {
+      // Allow superusers to create and read invitations.
       allow read, create: if isSuperUser();
-      allow update: if request.auth.uid == resource.data.userId; // User can accept/reject their own invitation
+      // Allow the invited user to update the invitation (to accept/reject it).
+      allow update: if request.auth.uid == resource.data.userId;
     }
   }
 }
+
+    
