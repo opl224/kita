@@ -1,53 +1,58 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
     function isSuperUser() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+    }
+    
+    function isUser(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isSuperUser());
-      allow update: if request.auth.uid == userId;
+      allow read: if request.auth != null;
       allow create: if request.auth.uid == userId;
+      allow update: if isUser(userId);
       allow list: if isSuperUser();
-
-      match /notifications/{notificationId} {
-        allow read, create: if request.auth.uid == userId || isSuperUser();
-      }
     }
     
-    match /groups/{groupId} {
-      allow read, update, delete: if resource.data.createdBy == request.auth.uid || isSuperUser();
-      allow create: if request.auth.uid == request.resource.data.createdBy;
-      
-      match /messages/{messageId} {
-        allow read, create: if get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
-        allow delete: if request.auth.uid == resource.data.senderId;
-      }
+    match /users/{userId}/notifications/{notificationId} {
+      allow read: if isUser(userId) || isSuperUser();
+      allow create: if isSuperUser();
+    }
+    
+    match /appState/{state} {
+      allow read: if request.auth != null;
+      allow write: if isSuperUser();
     }
     
     match /posts/{postId} {
       allow read, create: if request.auth != null;
       allow update, delete: if request.auth.uid == resource.data.userId;
     }
-    
-    match /appState/{stateId} {
-        allow read: if true;
-        allow write: if isSuperUser();
-    }
-    
-    match /userFeedback/{feedbackId} {
-        allow create: if request.auth.uid == request.resource.data.userId;
-        allow read: if isSuperUser();
-    }
 
-    match /invitations/{invitationId} {
+    match /userFeedback/{feedbackId} {
+      allow create: if request.auth != null;
+    }
+    
+    match /groups/{groupId} {
+      allow read: if request.auth.uid in resource.data.members;
       allow create: if isSuperUser();
-      allow read, update: if request.auth.uid == resource.data.userId;
+      allow update: if request.auth.uid == resource.data.createdBy || isSuperUser() || 
+                      (request.resource.data.members == resource.data.members.concat([request.auth.uid]) && !(request.auth.uid in resource.data.members));
+      allow delete: if request.auth.uid == resource.data.createdBy || isSuperUser();
+      
+      match /messages/{messageId} {
+        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+        allow delete: if request.auth.uid == resource.data.senderId;
+      }
+    }
+    
+    match /invitations/{invitationId} {
+        allow create: if isSuperUser();
+        allow read, update: if request.auth.uid == resource.data.userId;
     }
   }
 }
