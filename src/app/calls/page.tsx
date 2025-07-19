@@ -37,6 +37,7 @@ type Group = {
   createdBy: string;
 };
 
+const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
 
 const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
 
@@ -99,6 +100,7 @@ export default function VoiceNoteGroupsPage() {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [superAdminName, setSuperAdminName] = useState('Super Admin');
 
 
   const app = getFirebaseApp();
@@ -124,6 +126,17 @@ export default function VoiceNoteGroupsPage() {
 
     return () => unsubscribeAuth();
   }, [auth, db, router]);
+  
+  useEffect(() => {
+    const fetchSuperAdminName = async () => {
+        const superUserDocRef = doc(db, 'users', SUPER_USER_UID);
+        const superUserDocSnap = await getDoc(superUserDocRef);
+        if (superUserDocSnap.exists()) {
+            setSuperAdminName(superUserDocSnap.data().displayName || 'Super Admin');
+        }
+    };
+    fetchSuperAdminName();
+  }, [db]);
 
   useEffect(() => {
     if (!user) {
@@ -316,7 +329,7 @@ export default function VoiceNoteGroupsPage() {
                     <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                         <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
                         <h3 className="text-xl font-semibold text-foreground">Anda Belum Punya Grup</h3>
-                        <p className="text-muted-foreground">Minta Opal untuk mengundang Anda ke grup yang sudah ada.</p>
+                        <p className="text-muted-foreground">Minta {superAdminName} untuk mengundang Anda ke grup yang sudah ada.</p>
                     </Card>
                 )}
             </main>
