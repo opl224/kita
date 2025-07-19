@@ -287,6 +287,13 @@ export default function Home() {
     }
   };
 
+  async function handleLogout() {
+    setIsLogoutDialogOpen(true);
+  }
+
+  if (!user || !userData) {
+    return null;
+  }
 
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
@@ -298,14 +305,6 @@ export default function Home() {
   const showReceivedMoneyCard = userData && !isSuperUser && (userData.totalReceived || 0) > 0;
 
   const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
-
-  async function handleLogout() {
-    setIsLogoutDialogOpen(true);
-  }
-
-  if (!user || !userData) {
-    return null;
-  }
 
   return (
     <div className="flex flex-col gap-8">
