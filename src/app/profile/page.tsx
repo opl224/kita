@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Camera, Moon, Sun, Info } from "lucide-react";
+import { Camera, Moon, Sun, Info, Loader2 } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
@@ -234,7 +234,7 @@ export default function ProfilePage() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
               >
-                  {isUploading ? <CustomLoader /> : <Camera className="h-5 w-5"/>}
+                  {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5"/>}
                   <span className="sr-only">Ubah Avatar</span>
               </Button>
             </div>
@@ -311,4 +311,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
