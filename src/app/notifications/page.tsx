@@ -163,7 +163,12 @@ export default function NotificationsPage() {
                                            <span className="font-semibold">{invite.invitedBy}</span> mengundang Anda untuk bergabung dengan grup <span className="font-semibold">{invite.groupName}</span>.
                                        </p>
                                        <p className="text-xs text-muted-foreground mt-1">
-                                           {invite.createdAt ? formatDistanceToNow(invite.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
+                                           {invite.createdAt ? formatDistanceToNow(invite.createdAt.toDate(), { addSuffix: false, locale: id })
+                                           .replace('kurang dari ', '')
+                                           .replace('sekitar ', '')
+                                           .replace('pada ', '')
+                                           .replace('yang lalu ', '')
+                                           : 'baru saja'}
                                        </p>
                                        <div className="flex gap-2 mt-3">
                                             <Button size="sm" onClick={() => handleInvitation(invite, true)} disabled={!!processingInvite} className="w-20">
