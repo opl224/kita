@@ -90,7 +90,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
 const LikeCheckbox = ({ userId, isLiked, onLike }: { userId: string, isLiked: boolean, onLike: (liked: boolean) => void }) => {
     const uniqueId = `cbx-${userId}`;
     return (
-        <div className="checkbox-wrapper-12" onClick={(e) => e.stopPropagation()}>
+        <div className="checkbox-wrapper-12">
             <div className="cbx">
                 <input 
                     id={uniqueId} 
@@ -470,7 +470,7 @@ export default function Home() {
                                         <p className="font-semibold text-foreground">{u.displayName}</p>
                                         {isLikedByCurrentUser && <UserCheck className="h-5 w-5 text-blue-500" />}
                                     </div>
-                                    <div className="flex items-center gap-2 mr-2 pointer-events-none">
+                                    <div className="flex items-center gap-2 mr-2" onClick={(e) => e.stopPropagation()}>
                                         <LikeCheckbox 
                                             userId={u.id}
                                             isLiked={isLikedByCurrentUser}
@@ -623,3 +623,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
