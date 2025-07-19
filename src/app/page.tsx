@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift, UserCheck } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift, BadgeCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs, arrayUnion, arrayRemove } from "firebase/firestore";
@@ -468,15 +468,15 @@ export default function Home() {
                                     </Avatar>
                                     <div className="flex-1 pointer-events-none flex items-center gap-2">
                                         <p className="font-semibold text-foreground">{u.displayName}</p>
-                                        {isLikedByCurrentUser && <UserCheck className="h-5 w-5 text-blue-500" />}
+                                        {isLikedByCurrentUser && <BadgeCheck className="h-5 w-5 text-blue-500" />}
                                     </div>
-                                    <div className="flex items-center gap-2 mr-2" onClick={(e) => e.stopPropagation()}>
-                                        <LikeCheckbox 
-                                            userId={u.id}
-                                            isLiked={isLikedByCurrentUser}
-                                            onLike={(liked) => handleLikeUser(u.id, liked)}
-                                        />
-                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 mr-2" onClick={(e) => e.stopPropagation()}>
+                                    <LikeCheckbox 
+                                        userId={u.id}
+                                        isLiked={isLikedByCurrentUser}
+                                        onLike={(liked) => handleLikeUser(u.id, liked)}
+                                    />
                                 </div>
                                 <div onClick={(e) => e.stopPropagation()}>
                                     <Dialog open={editingUser?.id === u.id} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
@@ -623,5 +623,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
