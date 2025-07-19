@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
+import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2, Eye, Loader2 } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, where, getDocs, documentId } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirebaseApp } from '@/lib/firebase';
@@ -196,7 +196,7 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
                 className={`${neumorphicButtonStyle} w-full h-12`}
                 disabled={!base64Image || isSubmitting}
               >
-                {isSubmitting ? <CustomLoader /> : 'Posting'}
+                {isSubmitting ? <Loader2 className="animate-spin" /> : 'Posting'}
               </Button>
             </form>
          </div>
