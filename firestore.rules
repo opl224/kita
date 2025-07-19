@@ -2,58 +2,69 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+  
+    // Helper Functions
     function isSuperUser() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
     }
     
-    match /users/{userId} {
-      // Allow public read of user profiles to prevent errors on logout.
-      // NOTE: This makes displayName, email, and avatarUrl public.
-      allow read;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId || isSuperUser();
+    function isChangingOnly(field) {
+    	return request.resource.data.diff(resource.data).affectedKeys().hasOnly([field]);
+    }
 
+    // App State
+    match /appState/{state} {
+      allow read;
+      allow write: if isSuperUser();
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read;
+      allow create: if request.auth.uid != null;
+      allow update: if request.auth.uid == userId || (isSuperUser() && isChangingOnly('likedBy'));
+      allow delete: if isSuperUser();
+      
+      // User Notifications Subcollection
       match /notifications/{notificationId} {
         allow read, list: if request.auth.uid == userId;
         allow create: if isSuperUser();
       }
     }
-
-    match /appState/main {
-      allow read: if request.auth.uid != null;
-      allow write: if isSuperUser();
+    
+    // User Feedback Collection
+    match /userFeedback/{feedbackId} {
+        allow read: if isSuperUser();
+        allow create: if request.auth.uid != null;
     }
     
+    // Posts Collection
     match /posts/{postId} {
-      allow read, list: if request.auth.uid != null;
-      allow create, delete: if request.auth.uid == resource.data.userId;
-      allow update: if request.auth.uid == resource.data.userId 
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']));
-    }
-
-    match /userFeedback/{feedbackId} {
+        allow read: if request.auth.uid != null;
         allow create: if request.auth.uid != null;
-        allow read, list: if isSuperUser();
+        allow update: if (request.auth.uid == resource.data.userId) || isChangingOnly('likes');
+        allow delete: if request.auth.uid == resource.data.userId;
+    }
+    
+    // Invitations Collection
+    match /invitations/{invitationId} {
+        allow read, update: if request.auth.uid == resource.data.userId;
+        allow create: if isSuperUser();
     }
 
+    // Groups Collection
     match /groups/{groupId} {
-      allow read, list: if request.auth.uid in resource.data.members;
-      allow create: if request.auth.uid == request.resource.data.createdBy;
-      allow update: if (request.auth.uid == resource.data.createdBy || isSuperUser())
-                    || (request.auth.uid in request.resource.data.members && !(request.auth.uid in resource.data.members));
-      allow delete: if request.auth.uid == resource.data.createdBy || isSuperUser();
-
+      allow list, read: if request.auth.uid in resource.data.members;
+      allow create: if isSuperUser();
+      allow update: if (resource.data.createdBy == request.auth.uid || isSuperUser()) || (request.auth.uid in request.resource.data.members && !(request.auth.uid in resource.data.members));
+      allow delete: if resource.data.createdBy == request.auth.uid || isSuperUser();
+      
+      // Messages Subcollection
       match /messages/{messageId} {
         allow read, list, create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
         allow delete: if request.auth.uid == resource.data.senderId;
       }
-    }
-
-    match /invitations/{invitationId} {
-      allow read: if request.auth.uid == resource.data.userId;
-      allow create: if isSuperUser();
-      allow update: if request.auth.uid == resource.data.userId;
     }
   }
 }
