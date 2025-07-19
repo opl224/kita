@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
@@ -224,25 +224,33 @@ export default function Home() {
     if (!user || !editingUser || !isSuperUser) return;
     
     const appStateRef = doc(db, "appState", "main");
+    const userToCreditRef = doc(db, "users", editingUser.id);
     const amountToAdd = data.amount;
 
     try {
       await runTransaction(db, async (transaction) => {
         const appStateDoc = await transaction.get(appStateRef);
+        const userToCreditDoc = await transaction.get(userToCreditRef);
         
+        // Update global total
         let newTotal = amountToAdd;
         if (appStateDoc.exists()) {
           newTotal = (appStateDoc.data().totalMoneyCollected || 0) + amountToAdd;
         }
-        
         transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
-        const notificationMessage = `${editingUser.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
-        
+        // Update user's total received amount
+        if (userToCreditDoc.exists()) {
+            const currentReceived = userToCreditDoc.data().totalReceived || 0;
+            transaction.update(userToCreditRef, { totalReceived: currentReceived + amountToAdd });
+        }
+
+        // Create notification for the user
+        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
         const notificationsCollection = collection(db, "users", editingUser.id, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
-          userName: editingUser.displayName,
+          userName: userData.displayName,
           createdAt: serverTimestamp(),
           amount: amountToAdd,
         });
@@ -287,6 +295,7 @@ export default function Home() {
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
   
   const showFeedbackCard = userData && !isSuperUser && userData.hasGivenFeedback === false;
+  const showReceivedMoneyCard = userData && !isSuperUser && (userData.totalReceived || 0) > 0;
 
   const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
 
@@ -372,6 +381,21 @@ export default function Home() {
                   </div>
                 </div>
             </Card>
+            {showReceivedMoneyCard && (
+              <Card className={`${neumorphicInsetStyle} p-6 border-none sm:col-span-2`}>
+                  <div className="flex items-center justify-between gap-4 text-green-500">
+                    <div className="flex items-center gap-4">
+                      <Gift className="h-8 w-8" />
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">Uang Diterima</span>
+                        <span className="text-3xl font-bold text-foreground">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData.totalReceived || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+              </Card>
+            )}
         </div>
 
 
@@ -496,7 +520,7 @@ export default function Home() {
                     <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
                     <AlertDialogDescription>
                         Apakah Anda yakin ingin keluar dari aplikasi? Anda akan dikembalikan ke halaman login.
-                    </AlertDialogDescription>
+                    </Description>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setIsLogoutDialogOpen(false)}>Batal</AlertDialogCancel>
@@ -548,4 +572,3 @@ export default function Home() {
     </div>
   );
 }
-

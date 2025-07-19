@@ -80,6 +80,7 @@ export default function SignupPage() {
         lastSeenNotifications: new Date(0),
         lastSeenCalls: new Date(0),
         hasGivenFeedback: false,
+        totalReceived: 0,
       };
 
       if (user.uid === SUPER_USER_UID) {
