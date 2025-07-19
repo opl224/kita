@@ -237,80 +237,88 @@ export default function VoiceNoteGroupsPage() {
             </header>
 
             <main className="space-y-6 pb-24">
-                {groups.map(group => (
-                <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
-                    <div className="flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-2">
-                        <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
-                        {(isSuperUser || user?.uid === group.createdBy) && (
-                        <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
-                            <AlertDialogTrigger asChild>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="text-muted-foreground hover:text-destructive h-8 w-8"
-                                    onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
-                                >
-                                    <Trash2 className="h-4 w-4" />
+                {groups.length > 0 ? (
+                    groups.map(group => (
+                    <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
+                        <div className="flex flex-col gap-4">
+                        <div className="flex items-start justify-between gap-2">
+                            <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
+                            {(isSuperUser || user?.uid === group.createdBy) && (
+                            <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>
+                                    <Pencil className="h-4 w-4" />
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup secara permanen. Pesan di dalamnya tidak akan terhapus dari sisi aplikasi ini.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                        )}
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center -space-x-2">
-                            {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
-                            <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
-                                <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
-                                <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
-                            </Avatar>
-                            ))}
-                            {group.members && group.members.length > 5 && (
-                                <Avatar className="h-10 w-10 border-2 border-background bg-muted">
-                                    <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
-                                </Avatar>
+                                <AlertDialog open={deletingGroup?.id === group.id} onOpenChange={(isOpen) => !isOpen && setDeletingGroup(null)}>
+                                <AlertDialogTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                        onClick={(e) => { e.stopPropagation(); setDeletingGroup(group); }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Hapus Grup "{deletingGroup?.name}"?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini tidak dapat diurungkan. Ini akan menghapus grup secara permanen. Pesan di dalamnya tidak akan terhapus dari sisi aplikasi ini.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteGroup}>Hapus</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                             )}
                         </div>
-                        <Button variant="ghost" size="icon" className="text-primary opacity-50" onClick={() => handleGroupClick(group.id)}>
-                            <ArrowRight className="h-6 w-6" />
-                            <span className="sr-only">Masuk Grup</span>
-                        </Button>
-                    </div>
 
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
-                        <MessageCircle className="h-4 w-4 flex-shrink-0"/>
-                        <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
-                        <span className="text-xs shrink-0">
-                            {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
-                                ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: false, locale: id })
-                                .replace('kurang dari ', '')
-                                .replace('sekitar ', '')
-                                .replace('pada ', '')
-                                .replace('yang lalu ', '')
-                                : group.lastMessageTime || ""}
-                        </span>
-                    </div>
-                    </div>
-                </Card>
-                ))}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center -space-x-2">
+                                {group.members && group.members.slice(0, 5).map((member: any, index: number) => (
+                                <Avatar key={member?.id || index} className="h-10 w-10 border-2 border-background">
+                                    <AvatarImage src={member?.avatarUrl} alt={member?.displayName} className="object-cover"/>
+                                    <AvatarFallback>{member?.displayName?.charAt(0) || '?'}</AvatarFallback>
+                                </Avatar>
+                                ))}
+                                {group.members && group.members.length > 5 && (
+                                    <Avatar className="h-10 w-10 border-2 border-background bg-muted">
+                                        <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
+                                    </Avatar>
+                                )}
+                            </div>
+                            <Button variant="ghost" size="icon" className="text-primary opacity-50" onClick={() => handleGroupClick(group.id)}>
+                                <ArrowRight className="h-6 w-6" />
+                                <span className="sr-only">Masuk Grup</span>
+                            </Button>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground pt-4 border-t border-border/20">
+                            <MessageCircle className="h-4 w-4 flex-shrink-0"/>
+                            <p className="flex-grow truncate">{group.lastMessage || "Belum ada pesan."}</p>
+                            <span className="text-xs shrink-0">
+                                {group.lastMessageTime && typeof group.lastMessageTime.toDate === 'function'
+                                    ? formatDistanceToNow(group.lastMessageTime.toDate(), { addSuffix: false, locale: id })
+                                    .replace('kurang dari ', '')
+                                    .replace('sekitar ', '')
+                                    .replace('pada ', '')
+                                    .replace('yang lalu ', '')
+                                    : group.lastMessageTime || ""}
+                            </span>
+                        </div>
+                        </div>
+                    </Card>
+                    ))
+                ) : (
+                    <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
+                        <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
+                        <h3 className="text-xl font-semibold text-foreground">Anda Belum Punya Grup</h3>
+                        <p className="text-muted-foreground">Minta admin untuk mengundang Anda ke grup yang sudah ada.</p>
+                    </Card>
+                )}
             </main>
         </div>
         
