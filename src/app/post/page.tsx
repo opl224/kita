@@ -221,6 +221,7 @@ export default function PostPage() {
   const [user, setUser] = useState<User | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
+  const [viewingImagePost, setViewingImagePost] = useState<Post | null>(null);
 
   const [viewingLikersOfPost, setViewingLikersOfPost] = useState<Post | null>(null);
   const [likers, setLikers] = useState<Liker[]>([]);
@@ -415,15 +416,23 @@ export default function PostPage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     {post.caption && <p className="px-4 pb-3 text-sm">{post.caption}</p>}
-                     <div className="relative aspect-square w-full bg-muted">
-                        <Image
-                          src={post.imageUrl}
-                          alt={`Postingan oleh ${post.userName}`}
-                          layout="fill"
-                          objectFit="cover"
-                          unoptimized
-                        />
-                    </div>
+                    <Dialog open={viewingImagePost?.id === post.id} onOpenChange={(isOpen) => !isOpen && setViewingImagePost(null)}>
+                        <DialogTrigger asChild>
+                            <div className="relative aspect-square w-full bg-muted cursor-pointer" onClick={() => setViewingImagePost(post)}>
+                                <Image
+                                src={post.imageUrl}
+                                alt={`Postingan oleh ${post.userName}`}
+                                layout="fill"
+                                objectFit="contain"
+                                unoptimized
+                                />
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[90vw] w-auto">
+                            <DialogTitle className="sr-only">Gambar diperbesar</DialogTitle>
+                            <img src={post.imageUrl} alt={`Postingan oleh ${post.userName}`} className="max-h-[80vh] w-auto rounded-lg" />
+                        </DialogContent>
+                    </Dialog>
                   </CardContent>
                   <CardFooter className="p-4 flex justify-between items-center">
                       <div className="flex items-center gap-2">
