@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, where, getDocs, documentId } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { getFirebaseApp } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -59,6 +59,7 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
   const [base64Image, setBase64Image] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const app = getFirebaseApp();
   const db = getFirestore(app);
   
   useDialogBackButton(open, onOpenChange);
@@ -226,6 +227,7 @@ export default function PostPage() {
   const [loadingLikers, setLoadingLikers] = useState(false);
 
 
+  const app = getFirebaseApp();
   const db = getFirestore(app);
   const auth = getAuth(app);
   
@@ -521,3 +523,4 @@ export default function PostPage() {
     </div>
   );
 }
+

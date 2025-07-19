@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useEffect, useState }from 'react';
 import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { getFirebaseApp } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 export const menuItems = [
@@ -43,6 +43,7 @@ export function SidebarNav() {
   
   const [combinedNotificationCount, setCombinedNotificationCount] = useState(0);
 
+  const app = getFirebaseApp();
   const db = getFirestore(app);
   const auth = getAuth(app);
 
@@ -87,6 +88,8 @@ export function SidebarNav() {
     const unsubscribe = onSnapshot(notificationsQuery, (querySnapshot) => {
         const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationDoc));
         setGeneralNotifications(notifs);
+    }, (error) => {
+        console.error("Error fetching user notifications:", error);
     });
 
     return () => unsubscribe();
@@ -202,3 +205,4 @@ export function SidebarNav() {
     </TooltipProvider>
   );
 }
+

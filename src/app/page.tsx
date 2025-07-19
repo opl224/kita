@@ -7,7 +7,7 @@ import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, Th
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
@@ -102,6 +102,7 @@ export default function Home() {
   const [loadingContributions, setLoadingContributions] = useState(false);
 
 
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
 
@@ -196,8 +197,7 @@ export default function Home() {
         if (viewingUser) {
             setLoadingContributions(true);
             const contributionsQuery = query(
-                collection(db, "notifications"),
-                where("userName", "==", viewingUser.displayName),
+                collection(db, "users", viewingUser.id, "notifications"),
                 orderBy("createdAt", "desc")
             );
 
@@ -235,7 +235,8 @@ export default function Home() {
         transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
         const notificationMessage = `${editingUser.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
-        const notificationsCollection = collection(db, "notifications");
+        
+        const notificationsCollection = collection(db, "users", editingUser.id, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
           userName: editingUser.displayName,
@@ -544,3 +545,4 @@ export default function Home() {
     </div>
   );
 }
+

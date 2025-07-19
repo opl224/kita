@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset
 
 export default function LoginPage() {
   const router = useRouter();
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
@@ -124,3 +125,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

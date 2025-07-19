@@ -9,7 +9,7 @@ import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { getFirebaseApp } from '@/lib/firebase';
 import { CustomLoader } from './loader';
 import {
   AlertDialog,
@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const backPressCountRef = useRef(0);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -260,4 +261,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-    

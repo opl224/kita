@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from "firebase/firestore";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { useState } from "react";
 
 
@@ -40,6 +40,7 @@ const SUPER_USER_UID = "c3iJXsgRfdgvmzVtsSwefsmJ3pI2";
 
 export default function SignupPage() {
   const router = useRouter();
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
@@ -196,3 +197,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

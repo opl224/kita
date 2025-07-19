@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { getFirebaseApp } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -163,6 +163,7 @@ export default function GroupChatPage() {
     const params = useParams();
     const groupId = params.groupId as string;
     const router = useRouter();
+    const app = getFirebaseApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
@@ -600,3 +601,4 @@ const startRecording = async () => {
         </div>
     );
 }
+

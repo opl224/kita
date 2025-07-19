@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { getAuth, signOut, onAuthStateChanged, User, updatePassword } from "firebase/auth";
 import { getFirestore, doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 
@@ -47,6 +47,7 @@ const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset
 
 export default function ProfilePage() {
   const router = useRouter();
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { theme, setTheme } = useTheme();
@@ -310,3 +311,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

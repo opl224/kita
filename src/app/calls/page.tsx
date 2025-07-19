@@ -8,7 +8,7 @@ import { MessageCircle, ArrowRight, UserPlus, Trash2, Pencil, Loader2, Plus } fr
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, writeBatch, updateDoc, getDoc } from "firebase/firestore";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
@@ -101,6 +101,7 @@ export default function VoiceNoteGroupsPage() {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
 
+  const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
   const router = useRouter();
@@ -338,3 +339,4 @@ export default function VoiceNoteGroupsPage() {
     </div>
   );
 }
+

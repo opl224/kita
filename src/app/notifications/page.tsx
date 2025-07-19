@@ -6,7 +6,7 @@ import { Bell, Coins, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp, where, arrayUnion } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { getFirebaseApp } from "@/lib/firebase";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default function NotificationsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingInvite, setProcessingInvite] = useState<string | null>(null);
+  const app = getFirebaseApp();
   const db = getFirestore(app);
   const auth = getAuth(app);
 
@@ -60,7 +61,7 @@ export default function NotificationsPage() {
     }).catch(err => console.error("Error updating last seen timestamp:", err));
     
     // Fetch general notifications
-    const notifQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+    const notifQuery = query(collection(db, "users", user.uid, "notifications"), orderBy("createdAt", "desc"));
     const unsubscribeNotifs = onSnapshot(notifQuery, (querySnapshot) => {
       const fetchedNotifications: Notification[] = [];
       querySnapshot.forEach((doc) => {
@@ -214,3 +215,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+
