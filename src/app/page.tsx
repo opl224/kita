@@ -353,6 +353,21 @@ export default function Home() {
                   </div>
                 </div>
             </Card>
+            {showReceivedMoneyCard && (
+              <Card className={`${neumorphicInsetStyle} p-6 border-none sm:col-span-2`}>
+                  <div className="flex items-center justify-between gap-4 text-green-500">
+                    <div className="flex items-center gap-4">
+                      <Gift className="h-8 w-8" />
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">Uang Setor</span>
+                        <span className="text-3xl font-bold text-foreground">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData.totalReceived || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+              </Card>
+            )}
             <Card className={`${neumorphicInsetStyle} p-6 border-none`}>
                 <div className="flex items-center justify-between gap-4 text-red-500">
                   <div className="flex items-center gap-4">
@@ -366,21 +381,6 @@ export default function Home() {
                   </div>
                 </div>
             </Card>
-            {showReceivedMoneyCard && (
-              <Card className={`${neumorphicInsetStyle} p-6 border-none sm:col-span-2`}>
-                  <div className="flex items-center justify-between gap-4 text-green-500">
-                    <div className="flex items-center gap-4">
-                      <Gift className="h-8 w-8" />
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Uang Diterima</span>
-                        <span className="text-3xl font-bold text-foreground">
-                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(userData.totalReceived || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-              </Card>
-            )}
         </div>
 
 

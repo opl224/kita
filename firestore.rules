@@ -3,58 +3,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isSuperUser() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
     }
 
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId || isSuperUser();
-      // Allow user creation if the user is authenticated and the UID matches.
-      allow create: if request.auth.uid != null && request.auth.uid == userId;
-      allow list: if isSuperUser();
-
+      allow create: if request.auth.uid == userId;
+      allow read: if request.auth.uid != null;
+      allow update: if request.auth.uid == userId || isSuperUser();
+      
       match /notifications/{notificationId} {
-        allow read, list: if request.auth.uid == userId || isSuperUser();
-        // Allow creation if the request is from a superuser (adding money to another user)
-        // or if a user is creating a notification for themselves (future-proofing).
+        allow read: if request.auth.uid == userId || isSuperUser();
         allow create: if isSuperUser() || request.auth.uid == userId;
-        allow update, delete: if request.auth.uid == userId || isSuperUser();
       }
     }
     
-    match /appState/{stateId} {
-        allow read: if request.auth.uid != null;
-        allow write: if isSuperUser();
+    match /appState/main {
+    	allow read: if request.auth.uid != null;
+      allow write: if isSuperUser();
     }
     
     match /userFeedback/{feedbackId} {
-        allow create: if request.auth.uid != null;
-        allow read: if isSuperUser();
-    }
-
-    match /posts/{postId} {
-      allow read: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
-      allow update: if (request.auth.uid == resource.data.userId) || 
-                       (request.auth.uid != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']));
-      allow delete: if request.auth.uid == resource.data.userId || isSuperUser();
+      allow read: if isSuperUser();
     }
     
+    match /posts/{postId} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow update: if (request.resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption'])) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) && request.resource.data.caption == resource.data.caption && request.resource.data.userId == resource.data.userId);
+      allow delete: if resource.data.userId == request.auth.uid || isSuperUser();
+    }
+
     match /groups/{groupId} {
-      allow read, delete: if request.auth.uid == resource.data.createdBy || isSuperUser();
-      allow create: if request.auth.uid != null && isSuperUser();
-      allow update: if (request.auth.uid == resource.data.createdBy || isSuperUser()) ||
-                       // Allow a user to add themselves to the members list (accepting an invite)
-                       (request.auth.uid in request.resource.data.members && !(request.auth.uid in resource.data.members));
+      allow list, read: if request.auth.uid in resource.data.members;
+      allow create: if isSuperUser();
+      allow update: if (resource.data.createdBy == request.auth.uid || isSuperUser()) || (request.auth.uid in request.resource.data.members && !(request.auth.uid in resource.data.members));
+      allow delete: if resource.data.createdBy == request.auth.uid || isSuperUser();
       
       match /messages/{messageId} {
-        allow read, create: if request.auth.uid in resource.data.members;
+        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
         allow delete: if request.auth.uid == resource.data.senderId;
       }
     }
-
+    
     match /invitations/{invitationId} {
       allow create: if isSuperUser();
       allow read, update: if request.auth.uid == resource.data.userId;
