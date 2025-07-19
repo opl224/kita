@@ -18,8 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
-import { CustomLoader } from "@/components/layout/loader";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const signupFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
@@ -204,7 +203,7 @@ export default function SignupPage() {
                 )}
                 />
                 <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full`} disabled={isSubmitting}>
-                    {isSubmitting ? <CustomLoader /> : 'Daftar'}
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : 'Daftar'}
                 </Button>
             </form>
             </Form>
