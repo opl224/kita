@@ -7,8 +7,8 @@ import { z } from "zod";
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from "firebase/firestore";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, AuthErrorCodes } from "firebase/auth";
+import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getFirebaseApp } from "@/lib/firebase";
 import { useState } from "react";
 
@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { CustomLoader } from "@/components/layout/loader";
 
 const signupFormSchema = z.object({
   displayName: z.string().min(4, "Nama pengguna minimal 4 karakter.").regex(/^[a-zA-Z0-9]+$/, "Nama pengguna hanya boleh berisi huruf dan angka."),
@@ -37,17 +38,17 @@ const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-l
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
 const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
-// vopA2wSkuDOqt2AUOPIvOdCMtAg2
-// c3iJXsgRfdgvmzVtsSwefsmJ3pI2
 
 export default function SignupPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { toast } = useToast();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -61,6 +62,7 @@ export default function SignupPage() {
   });
 
   async function onSubmit(data: SignupFormValues) {
+    setIsSubmitting(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
@@ -94,6 +96,22 @@ export default function SignupPage() {
 
     } catch (error: any) {
         console.error("Signup failed:", error);
+        let title = "Pendaftaran Gagal";
+        let description = "Terjadi kesalahan. Silakan coba lagi.";
+
+        if (error.code === AuthErrorCodes.EMAIL_EXISTS) {
+            description = "Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.";
+        } else if (error.code === AuthErrorCodes.WEAK_PASSWORD) {
+            description = "Kata sandi terlalu lemah. Gunakan minimal 8 karakter.";
+        }
+
+        toast({
+            variant: "destructive",
+            title: title,
+            description: description,
+        });
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -115,7 +133,7 @@ export default function SignupPage() {
                         <FormItem>
                         <FormLabel className="text-muted-foreground">Nama Pengguna</FormLabel>
                         <FormControl>
-                            <Input placeholder="Nama pengguna" {...field} className={neumorphicInputStyle} />
+                            <Input placeholder="Nama pengguna" {...field} className={neumorphicInputStyle} disabled={isSubmitting}/>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -128,7 +146,7 @@ export default function SignupPage() {
                     <FormItem>
                     <FormLabel className="text-muted-foreground">Email</FormLabel>
                     <FormControl>
-                        <Input type="email" placeholder="Email Anda" {...field} className={neumorphicInputStyle} />
+                        <Input type="email" placeholder="Email Anda" {...field} className={neumorphicInputStyle} disabled={isSubmitting}/>
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -142,7 +160,7 @@ export default function SignupPage() {
                     <FormLabel className="text-muted-foreground">Kata Sandi</FormLabel>
                     <div className="relative">
                         <FormControl>
-                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} />
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} disabled={isSubmitting}/>
                         </FormControl>
                         <Button
                             type="button"
@@ -150,6 +168,7 @@ export default function SignupPage() {
                             size="icon"
                             className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-12 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isSubmitting}
                         >
                             {showPassword ? <EyeOff /> : <Eye />}
                         </Button>
@@ -166,7 +185,7 @@ export default function SignupPage() {
                     <FormLabel className="text-muted-foreground">Konfirmasi Kata Sandi</FormLabel>
                      <div className="relative">
                         <FormControl>
-                            <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} />
+                            <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} className={`${neumorphicInputStyle} pr-10`} disabled={isSubmitting}/>
                         </FormControl>
                         <Button
                             type="button"
@@ -174,6 +193,7 @@ export default function SignupPage() {
                             size="icon"
                             className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-12 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            disabled={isSubmitting}
                         >
                             {showConfirmPassword ? <EyeOff /> : <Eye />}
                         </Button>
@@ -182,8 +202,8 @@ export default function SignupPage() {
                     </FormItem>
                 )}
                 />
-                <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full`}>
-                    Daftar
+                <Button type="submit" variant="default" className={`${neumorphicButtonStyle} w-full`} disabled={isSubmitting}>
+                    {isSubmitting ? <CustomLoader /> : 'Daftar'}
                 </Button>
             </form>
             </Form>
@@ -199,4 +219,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
