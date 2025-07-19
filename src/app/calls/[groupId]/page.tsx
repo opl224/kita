@@ -148,6 +148,7 @@ export default function GroupChatPage() {
     // Invite users state
     const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+    const [pendingInviteUserIds, setPendingInviteUserIds] = useState<Set<string>>(new Set());
     const [nonMemberUsers, setNonMemberUsers] = useState<AppUser[]>([]);
     const [invitingUsers, setInvitingUsers] = useState<Set<string>>(new Set());
 
@@ -213,8 +214,6 @@ export default function GroupChatPage() {
             setUser(currentUser);
             
             const userDocRef = doc(db, 'users', currentUser.uid);
-
-            // Mark calls as seen when entering the page
             updateDoc(userDocRef, {
               lastSeenCalls: serverTimestamp()
             }).catch(err => console.error("Error updating last seen for calls:", err));
@@ -272,30 +271,43 @@ export default function GroupChatPage() {
 
     }, [user, groupId, db, router]);
 
-    // Effect to fetch users for invitation dialog
+    // Effect to fetch users and pending invitations for the dialog
     useEffect(() => {
-        if (isSuperUser && isInviteDialogOpen) {
-            const fetchUsers = async () => {
-                const usersCollection = collection(db, 'users');
-                const usersSnapshot = await getDocs(usersCollection);
-                const allUsersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-                setAllUsers(allUsersData);
-            };
-            fetchUsers();
-        }
-    }, [isSuperUser, isInviteDialogOpen, db]);
+        if (!isSuperUser || !isInviteDialogOpen || !groupId) return;
+        
+        const fetchUsersAndInvites = async () => {
+            // Fetch all users
+            const usersCollection = collection(db, 'users');
+            const usersSnapshot = await getDocs(usersCollection);
+            const allUsersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+            setAllUsers(allUsersData);
+            
+            // Fetch pending invitations for this group
+            const invitationsQuery = query(
+                collection(db, 'invitations'), 
+                where('groupId', '==', groupId),
+                where('status', '==', 'pending')
+            );
+            const invitesSnapshot = await getDocs(invitationsQuery);
+            const pendingIds = new Set(invitesSnapshot.docs.map(doc => doc.data().userId));
+            setPendingInviteUserIds(pendingIds);
+        };
+        
+        fetchUsersAndInvites();
 
+    }, [isSuperUser, isInviteDialogOpen, db, groupId]);
+    
     // Effect to filter non-member users
     useEffect(() => {
         if (groupInfo && allUsers.length > 0) {
             const memberIds = new Set(groupInfo.members);
-            const nonMembers = allUsers.filter(u => !memberIds.has(u.id));
+            const nonMembers = allUsers.filter(u => !memberIds.has(u.id) && !pendingInviteUserIds.has(u.id));
             setNonMemberUsers(nonMembers);
         }
-    }, [groupInfo, allUsers]);
+    }, [groupInfo, allUsers, pendingInviteUserIds]);
 
     const handleInviteUser = async (invitedUser: AppUser) => {
-        if (!user || !groupInfo) return;
+        if (!user || !groupInfo || invitingUsers.has(invitedUser.id)) return;
 
         setInvitingUsers(prev => new Set(prev).add(invitedUser.id));
 
@@ -312,6 +324,8 @@ export default function GroupChatPage() {
             });
 
             console.log(`Invitation sent to ${invitedUser.displayName}.`);
+             // Immediately hide the user from the list
+            setNonMemberUsers(prev => prev.filter(u => u.id !== invitedUser.id));
             
         } catch (error) {
             console.error("Error sending invitation:", error);
@@ -515,9 +529,10 @@ const startRecording = async () => {
                                             size="sm" 
                                             onClick={() => handleInviteUser(u)}
                                             disabled={invitingUsers.has(u.id)}
+                                            className="w-24"
                                         >
                                             {invitingUsers.has(u.id) ? (
-                                                <CustomLoader />
+                                                <Loader2 className="h-4 w-4 animate-spin" />
                                             ) : (
                                                 <UserPlus className="h-4 w-4 mr-2" />
                                             )}
@@ -601,4 +616,3 @@ const startRecording = async () => {
         </div>
     );
 }
-

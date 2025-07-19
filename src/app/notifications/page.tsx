@@ -98,26 +98,22 @@ export default function NotificationsPage() {
   }, [db, user]);
 
   const handleInvitation = async (invitation: Invitation, accept: boolean) => {
-    if (!user) return;
+    if (!user || processingInvite) return;
     setProcessingInvite(invitation.id);
 
     const invitationRef = doc(db, "invitations", invitation.id);
-    const groupRef = doc(db, "groups", invitation.groupId);
-
+    
     try {
         if (accept) {
-            // Update the group document to add the new member
+            const groupRef = doc(db, "groups", invitation.groupId);
             await updateDoc(groupRef, {
                 members: arrayUnion(user.uid)
             });
-
-            // After successfully adding to group, update the invitation status
             await updateDoc(invitationRef, {
                 status: 'accepted'
             });
 
         } else {
-            // Just update the invitation status to rejected
             await updateDoc(invitationRef, {
                 status: 'rejected'
             });
@@ -170,8 +166,8 @@ export default function NotificationsPage() {
                                            {invite.createdAt ? formatDistanceToNow(invite.createdAt.toDate(), { addSuffix: true, locale: id }) : 'baru saja'}
                                        </p>
                                        <div className="flex gap-2 mt-3">
-                                            <Button size="sm" onClick={() => handleInvitation(invite, true)} disabled={!!processingInvite}>
-                                                {processingInvite === invite.id ? <CustomLoader /> : 'Terima'}
+                                            <Button size="sm" onClick={() => handleInvitation(invite, true)} disabled={!!processingInvite} className="w-20">
+                                                {processingInvite === invite.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Terima'}
                                             </Button>
                                             <Button size="sm" variant="ghost" onClick={() => handleInvitation(invite, false)} disabled={!!processingInvite}>
                                                 Tolak
@@ -215,4 +211,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
