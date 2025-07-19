@@ -253,6 +253,10 @@ export default function PostPage() {
   }, [auth]);
 
   useEffect(() => {
+    if (!user) {
+        setPosts([]);
+        return;
+    }
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const postsData: Post[] = [];
@@ -265,7 +269,7 @@ export default function PostPage() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, user]);
   
   // Effect to fetch likers when a post is selected for viewing likers
   useEffect(() => {
@@ -523,4 +527,3 @@ export default function PostPage() {
     </div>
   );
 }
-

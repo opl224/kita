@@ -79,6 +79,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
 
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [isSuperUser, setIsSuperUser] = useState(false);
@@ -94,7 +95,6 @@ export default function Home() {
   const [userContributions, setUserContributions] = useState<Contribution[]>([]);
   const [loadingContributions, setLoadingContributions] = useState(false);
   
-  const router = useRouter();
   const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -122,6 +122,7 @@ export default function Home() {
   
     useEffect(() => {
         if (!user) {
+            setUserData(null);
             return;
         }
 
