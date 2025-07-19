@@ -198,7 +198,7 @@ export default function ProfilePage() {
                         <strong>Desain dan Tulisan</strong>
                         <p>Menggunakan gaya <strong>Neumorphism</strong> dan tulisan standar Poppins.</p>
                         <br/>
-                        <strong>Penting: </strong><strong>Jika Ada BUG itu fitur!</strong>
+                        <strong>Penting: </strong><strong>Jika ada BUG berarti itu fitur!</strong>
                         </div>
                     </DialogContent>
                 </Dialog>
