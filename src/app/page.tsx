@@ -3,10 +3,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift } from "lucide-react";
+import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs, arrayUnion, arrayRemove } from "firebase/firestore";
 import { getFirebaseApp } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,16 @@ type Contribution = {
     createdAt: any;
 }
 
+type AppUser = {
+    id: string;
+    displayName: string;
+    email: string;
+    avatarUrl: string;
+    totalReceived?: number;
+    isSuperUser?: boolean;
+    hasGivenFeedback?: boolean;
+    likedBy?: string[];
+}
 
 const ITEMS_PER_PAGE = 5;
 
@@ -77,13 +87,43 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, className }
   );
 };
 
+const LikeCheckbox = ({ userId, isLiked, onLike }: { userId: string, isLiked: boolean, onLike: (liked: boolean) => void }) => {
+    const uniqueId = `cbx-${userId}`;
+    return (
+        <div className="checkbox-wrapper-12" onClick={(e) => e.stopPropagation()}>
+            <div className="cbx">
+                <input 
+                    id={uniqueId} 
+                    type="checkbox" 
+                    checked={isLiked}
+                    onChange={(e) => onLike(e.target.checked)}
+                />
+                <label htmlFor={uniqueId}></label>
+                <svg width="15" height="14" viewBox="0 0 15 14" fill="none">
+                    <path d="M2 8.36364L6.23077 12L13 2"></path>
+                </svg>
+            </div>
+
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="goo-12">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"></feGaussianBlur>
+                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -7" result="goo-12"></feColorMatrix>
+                        <feBlend in="SourceGraphic" in2="goo-12"></feBlend>
+                    </filter>
+                </defs>
+            </svg>
+        </div>
+    );
+};
+
 
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<AppUser | null>(null);
   const [isSuperUser, setIsSuperUser] = useState(false);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
   const [myTotalLikes, setMyTotalLikes] = useState(0);
@@ -130,7 +170,7 @@ export default function Home() {
 
         const unsubscribeUser = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
-                const data = docSnap.data();
+                const data = docSnap.data() as AppUser;
                 setUserData(data);
                 const userIsAdmin = !!data.isSuperUser;
                 setIsSuperUser(userIsAdmin);
@@ -172,7 +212,7 @@ export default function Home() {
         
         const usersQuery = query(collection(db, "users"));
         const unsubscribeAllUsers = onSnapshot(usersQuery, (usersSnapshot) => {
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
             setAllUsers(usersList);
         });
 
@@ -235,11 +275,11 @@ export default function Home() {
             transaction.update(userToCreditRef, { totalReceived: currentReceived + amountToAdd });
         }
 
-        const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
+        const notificationMessage = `${userData?.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
         const notificationsCollection = collection(db, "users", editingUser.id, "notifications");
         transaction.set(doc(notificationsCollection), {
           message: notificationMessage,
-          userName: userData.displayName,
+          userName: userData?.displayName,
           createdAt: serverTimestamp(),
           amount: amountToAdd,
         });
@@ -280,6 +320,26 @@ export default function Home() {
     setIsLogoutDialogOpen(true);
   };
   
+    const handleLikeUser = async (targetUserId: string, shouldLike: boolean) => {
+        if (!user || !isSuperUser) return;
+
+        const targetUserRef = doc(db, "users", targetUserId);
+        try {
+            if (shouldLike) {
+                await updateDoc(targetUserRef, {
+                    likedBy: arrayUnion(user.uid)
+                });
+            } else {
+                await updateDoc(targetUserRef, {
+                    likedBy: arrayRemove(user.uid)
+                });
+            }
+        } catch (error) {
+            console.error("Error updating user like status:", error);
+        }
+    };
+
+
   if (!user || !userData) {
     return <CustomLoader />;
   }
@@ -397,20 +457,25 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="space-y-4">
-                        {paginatedUsers.map((u) => (
+                        {paginatedUsers.map((u) => {
+                           const isLikedByCurrentUser = u.likedBy?.includes(user.uid) ?? false;
+                           return (
                             <div key={u.id} className="flex items-center justify-between gap-2 p-3 rounded-lg bg-background shadow-neumorphic-inset">
                                 <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => setViewingUser(u)}>
                                     <Avatar className="h-10 w-10 border-none rounded-full pointer-events-none">
                                         <AvatarImage src={u.avatarUrl} alt={u.displayName} className="rounded-full" />
                                         <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                                     </Avatar>
-                                    <div className="flex-1 pointer-events-none">
+                                    <div className="flex-1 pointer-events-none flex items-center gap-2">
                                         <p className="font-semibold text-foreground">{u.displayName}</p>
-                                        <p className="text-sm text-muted-foreground">{u.email}</p>
+                                        {isLikedByCurrentUser && <UserCheck className="h-5 w-5 text-blue-500" />}
                                     </div>
-                                    <div className="flex items-center gap-2 text-red-500 mr-2 pointer-events-none">
-                                        <Heart className="h-4 w-4" />
-                                        <span className="text-sm font-medium text-muted-foreground">{u.totalLikes || 0}</span>
+                                    <div className="flex items-center gap-2 mr-2 pointer-events-none">
+                                        <LikeCheckbox 
+                                            userId={u.id}
+                                            isLiked={isLikedByCurrentUser}
+                                            onLike={(liked) => handleLikeUser(u.id, liked)}
+                                        />
                                     </div>
                                 </div>
                                 <div onClick={(e) => e.stopPropagation()}>
@@ -453,7 +518,7 @@ export default function Home() {
                                     </Dialog>
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
                     <PaginationControls 
                       currentPage={allUsersPage}

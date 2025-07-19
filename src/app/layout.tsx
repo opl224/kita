@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./loader.css";
+import "./checkbox.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
