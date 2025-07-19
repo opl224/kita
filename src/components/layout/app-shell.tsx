@@ -107,42 +107,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     backPressCountRef.current = 0;
   }, [pathname]);
 
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-        // Always prevent the default back navigation
-        event.preventDefault();
-        
-        // Priority 1: If a dialog is open, let its own handler close it.
-        // The useDialogBackButton hook will handle closing it.
-        if (dialogState.isOpen) {
-            dialogState.close();
-            return;
-        }
-
-        // Priority 2: "Press again to exit" logic
-        backPressCountRef.current += 1;
-        
-        if (backPressCountRef.current === 1) {
-            setTimeout(() => {
-                backPressCountRef.current = 0;
-            }, 2000); // Reset after 2 seconds
-        } else if (backPressCountRef.current === 2) {
-            setIsLogoutDialogOpen(true);
-            backPressCountRef.current = 0; // Reset after triggering dialog
-        }
-        
-        // Re-push the state to capture the next back button press
-        window.history.pushState(null, '');
-    };
+  const handlePopState = useCallback((event: PopStateEvent) => {
+    event.preventDefault();
     
-    // Add a history entry to capture the back button press initially
+    if (dialogState.isOpen) {
+        dialogState.close();
+        return;
+    }
+
+    backPressCountRef.current += 1;
+    
+    if (backPressCountRef.current === 1) {
+        setTimeout(() => {
+            backPressCountRef.current = 0;
+        }, 2000); 
+    } else if (backPressCountRef.current === 2) {
+        setIsLogoutDialogOpen(true);
+        backPressCountRef.current = 0;
+    }
+    
+    window.history.pushState(null, '');
+  }, []); 
+
+  useEffect(() => {
     window.history.pushState(null, '');
     window.addEventListener('popstate', handlePopState);
     
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, []); 
+  }, [handlePopState]); 
 
   async function handleLogout() {
     try {
@@ -260,4 +254,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
