@@ -40,6 +40,9 @@ export default function NotificationsPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (!currentUser) {
+        setLoading(false);
+      }
     });
     return () => unsubscribeAuth();
   }, [auth]);
@@ -127,7 +130,7 @@ export default function NotificationsPage() {
 
 
   if (loading) {
-    return <CustomLoader />;
+    return null;
   }
 
   return (

@@ -75,6 +75,7 @@ export default function ProfilePage() {
     const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         router.push('/login');
+        setLoading(false);
         return;
       }
       
@@ -159,7 +160,11 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading || !userData) {
+  if (loading) {
+    return null;
+  }
+  
+  if (!userData) {
     return <CustomLoader />;
   }
 
