@@ -87,24 +87,19 @@ export default function Home() {
   const [totalCollected, setTotalCollected] = useState(0);
   const [myTotalLikes, setMyTotalLikes] = useState(0);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const router = useRouter();
-
   const [allUsersPage, setAllUsersPage] = useState(1);
-  
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-  useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
-
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-
-  // New state for viewing user contribution history
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [userContributions, setUserContributions] = useState<Contribution[]>([]);
   const [loadingContributions, setLoadingContributions] = useState(false);
-
-
+  
+  const router = useRouter();
   const app = getFirebaseApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
+
+  useDialogBackButton(isAvatarDialogOpen, setIsAvatarDialogOpen);
 
   const form = useForm<MoneyFormValues>({
     resolver: zodResolver(moneyFormSchema),
@@ -141,9 +136,6 @@ export default function Home() {
                  if (user.uid === "vopA2wSkuDOqt2AUOPIvOdCMtAg2" && !data.isSuperUser) {
                     await updateDoc(userDocRef, { isSuperUser: true });
                  }
-                // vopA2wSkuDOqt2AUOPIvOdCMtAg2
-                // c3iJXsgRfdgvmzVtsSwefsmJ3pI2
-
             }
         });
 
@@ -219,7 +211,6 @@ export default function Home() {
         }
     }, [viewingUser, db]);
 
-
   const handleAddMoney = async (data: MoneyFormValues) => {
     if (!user || !editingUser || !isSuperUser) return;
     
@@ -232,20 +223,17 @@ export default function Home() {
         const appStateDoc = await transaction.get(appStateRef);
         const userToCreditDoc = await transaction.get(userToCreditRef);
         
-        // Update global total
         let newTotal = amountToAdd;
         if (appStateDoc.exists()) {
           newTotal = (appStateDoc.data().totalMoneyCollected || 0) + amountToAdd;
         }
         transaction.set(appStateRef, { totalMoneyCollected: newTotal }, { merge: true });
 
-        // Update user's total received amount
         if (userToCreditDoc.exists()) {
             const currentReceived = userToCreditDoc.data().totalReceived || 0;
             transaction.update(userToCreditRef, { totalReceived: currentReceived + amountToAdd });
         }
 
-        // Create notification for the user
         const notificationMessage = `${userData.displayName} menambahkan ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amountToAdd)}.`;
         const notificationsCollection = collection(db, "users", editingUser.id, "notifications");
         transaction.set(doc(notificationsCollection), {
@@ -287,24 +275,22 @@ export default function Home() {
     }
   };
 
-  async function handleLogout() {
+  const handleLogout = () => {
     setIsLogoutDialogOpen(true);
-  }
-
+  };
+  
   if (!user || !userData) {
-    return null;
+    return <CustomLoader />;
   }
-
+  
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
-
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
-  
   const showFeedbackCard = userData && !isSuperUser && userData.hasGivenFeedback === false;
   const showReceivedMoneyCard = userData && !isSuperUser && (userData.totalReceived || 0) > 0;
-
   const totalUserContribution = userContributions.reduce((sum, item) => sum + item.amount, 0);
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -519,7 +505,7 @@ export default function Home() {
                     <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
                     <AlertDialogDescription>
                         Apakah Anda yakin ingin keluar dari aplikasi? Anda akan dikembalikan ke halaman login.
-                    </Description>
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setIsLogoutDialogOpen(false)}>Batal</AlertDialogCancel>
