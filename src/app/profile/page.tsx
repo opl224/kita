@@ -40,7 +40,7 @@ type UserProfileData = {
     avatarUrl: string;
 };
 
-const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-8 border-none";
+const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none max-w-full";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
@@ -171,7 +171,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
       <header className="pt-4">
-        <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+        <h1 className="text-4xl font-headline font-bold text-foreground truncate" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Profil Saya
         </h1>
       </header>
@@ -246,7 +246,7 @@ export default function ProfilePage() {
                   <span className="sr-only">Ubah Avatar</span>
               </Button>
             </div>
-            <h2 className="text-2xl font-headline font-semibold text-foreground">{userData.displayName}</h2>
+            <h2 className="text-2xl font-headline font-semibold text-foreground truncate">{userData.displayName}</h2>
           </div>
 
           <Form {...form}>
