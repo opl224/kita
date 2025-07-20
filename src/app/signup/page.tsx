@@ -119,7 +119,7 @@ export default function SignupPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <Card className={neumorphicCardStyle}>
             <div className="flex flex-col items-center gap-4 mb-8">
-                <Image src="/logo.png" alt="Kita's Logo" width={64} height={64} />
+                <Image src="/iocns.png" alt="Kita's Logo" width={64} height={64} />
                 <h1 className="text-3xl font-headline font-bold text-foreground">
                     Buat Akun Kita's
                 </h1>
