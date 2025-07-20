@@ -470,7 +470,7 @@ export default function PostPage() {
                   </CardHeader>
                   <CardContent className={cn("p-0", isTextOnlyPost && "p-4")}>
                     {post.caption && (
-                        <p className={cn("text-sm", isTextOnlyPost ? "text-lg whitespace-pre-wrap" : "px-4 pb-3")}>
+                        <p className={cn("text-sm", isTextOnlyPost ? "text-lg whitespace-pre-wrap break-words" : "px-4 pb-3")}>
                             {post.caption}
                         </p>
                     )}
