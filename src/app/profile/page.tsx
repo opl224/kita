@@ -195,6 +195,7 @@ export default function ProfilePage() {
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-headline">Informasi Aplikasi</DialogTitle>
                             </DialogHeader>
+                            <br/>
                             <div className="text-sm space-y-3 text-foreground">
                             <p className="text-center">Aplikasi ini dibuat tidak tau tujuannya apa cuma iseng aja.</p>
                             <br/>
