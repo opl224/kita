@@ -250,7 +250,7 @@ export default function VoiceNoteGroupsPage() {
   }
 
   return (
-    <div>
+    <div className="overflow-hidden">
         <div className="flex flex-col gap-8">
             <header className="flex justify-between items-center">
                 <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
@@ -372,4 +372,5 @@ export default function VoiceNoteGroupsPage() {
   );
 
     
+
 
