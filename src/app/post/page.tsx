@@ -470,7 +470,7 @@ export default function PostPage() {
                   </CardHeader>
                   <CardContent className={cn("p-0", isTextOnlyPost && "p-4")}>
                     {post.caption && (
-                        <p className={cn("text-sm", isTextOnlyPost ? "text-lg whitespace-pre-wrap break-words" : "px-4 pb-3")}>
+                        <p className={cn("text-sm break-words", isTextOnlyPost ? "text-lg whitespace-pre-wrap" : "px-4 pb-3")}>
                             {post.caption}
                         </p>
                     )}
@@ -565,29 +565,31 @@ export default function PostPage() {
        </AlertDialog>
 
         <Dialog open={!!viewingLikersOfPost} onOpenChange={(isOpen) => { if (!isOpen) setViewingLikersOfPost(null); }}>
-            <DialogContent className="max-w-[90vw] sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Disukai oleh</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-72">
-                    <div className="space-y-2 pr-4">
-                        {loadingLikers ? (
-                            <CustomLoader />
-                        ) : likers.length > 0 ? (
-                            likers.map(liker => (
-                                <div key={liker.id} className="flex items-center gap-3 p-2 rounded-lg">
-                                    <Avatar className="h-10 w-10">
-                                        <AvatarImage src={liker.avatarUrl} />
-                                        <AvatarFallback>{liker.displayName.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <p className="font-semibold">{liker.displayName}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-center text-muted-foreground py-8">Belum ada yang menyukai postingan ini.</p>
-                        )}
-                    </div>
-                </ScrollArea>
+            <DialogContent className="max-w-[90vw] sm:max-w-md bg-transparent border-none shadow-none">
+                <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+                    <DialogHeader>
+                        <DialogTitle>Disukai oleh</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="h-72 mt-4">
+                        <div className="space-y-2 pr-4">
+                            {loadingLikers ? (
+                                <CustomLoader />
+                            ) : likers.length > 0 ? (
+                                likers.map(liker => (
+                                    <div key={liker.id} className="flex items-center gap-3 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={liker.avatarUrl} />
+                                            <AvatarFallback>{liker.displayName.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <p className="font-semibold">{liker.displayName}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-muted-foreground py-8">Belum ada yang menyukai postingan ini.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     </div>
