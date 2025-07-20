@@ -252,13 +252,13 @@ export default function VoiceNoteGroupsPage() {
   return (
     <div className="overflow-hidden">
         <div className="flex flex-col gap-8">
-            <header className="flex justify-between items-center">
+            <header className="flex justify-between items-center px-4 pt-4">
                 <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
                 Pesan Suara Grup
                 </h1>
             </header>
 
-            <main className="space-y-6 pb-24">
+            <main className="space-y-6 pb-24 px-4">
                 {groups.length > 0 ? (
                     groups.map(group => (
                     <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>

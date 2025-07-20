@@ -82,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isAuthRequired = !isAuthPage;
   const isGroupChatPage = pathname.startsWith('/calls/') && pathname.split('/').length > 2;
+  const isCallsPage = pathname === '/calls';
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -217,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <main className={cn("flex-1 overflow-y-auto", { "p-4 sm:p-6 lg:p-8": !isGroupChatPage })}>
+      <main className={cn("flex-1 overflow-y-auto", { "p-4 sm:p-6 lg:p-8": !isGroupChatPage && !isCallsPage })}>
         {children}
       </main>
       {user && !isGroupChatPage && <SidebarNav />}
