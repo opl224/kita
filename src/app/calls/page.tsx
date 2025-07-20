@@ -264,7 +264,7 @@ export default function VoiceNoteGroupsPage() {
                     <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
                         <div className="flex flex-col gap-4">
                         <div className="flex items-start justify-between gap-2">
-                            <h2 className="text-xl font-headline font-semibold text-foreground truncate">{group.name}</h2>
+                            <h2 className="text-xl font-headline font-semibold text-foreground truncate max-w-[200px]">{group.name}</h2>
                             {(isSuperUser || user?.uid === group.createdBy) && (
                             <div className="flex items-center gap-1 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingGroup(group); }}>

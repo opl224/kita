@@ -496,7 +496,7 @@ const startRecording = async () => {
                     <ArrowLeft />
                 </Button>
                 <div className="ml-4">
-                    <h1 className="text-xl font-bold font-headline">{groupInfo?.name || 'Grup'}</h1>
+                    <h1 className="text-xl font-bold font-headline truncate max-w-[200px]">{groupInfo?.name || 'Grup'}</h1>
                     <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
                 </div>
                  {isSuperUser && (
@@ -522,7 +522,7 @@ const startRecording = async () => {
                                             <AvatarFallback>{u.displayName.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1">
-                                            <p className="font-semibold">{u.displayName}</p>
+                                            <p className="font-semibold truncate max-w-[200px]">{u.displayName}</p>
                                             <p className="text-xs text-muted-foreground">{u.email}</p>
                                         </div>
                                         <Button 
@@ -563,7 +563,7 @@ const startRecording = async () => {
                             )}
                             <div className={`flex items-center gap-2 ${isSender ? 'flex-row-reverse' : 'flex-row'}`}>
                                 <div className={`flex flex-col max-w-[75%] ${isSender ? 'items-end' : 'items-start'}`}>
-                                    {!isSender && <p className="text-xs text-muted-foreground mb-1">{msg.senderName}</p>}
+                                    {!isSender && <p className="text-xs text-muted-foreground mb-1 truncate max-w-[200px]">{msg.senderName}</p>}
                                     <Card className={`p-2 rounded-xl border-none ${isSender ? 'bg-primary/20' : 'bg-muted'}`}>
                                         <AudioPlayer 
                                             src={msg.audioUrl} 

@@ -361,7 +361,7 @@ export default function Home() {
       <header className="flex justify-between items-center relative">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
-          <h1 className="text-3xl font-headline font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-3xl font-headline font-bold text-foreground flex items-center gap-2 truncate max-w-[200px]">
             {userData?.displayName || 'Pengguna'}
             {isSuperUser && "👑"}
             {!isSuperUser && (userData?.likedBy?.length ?? 0) > 0 && (
@@ -474,7 +474,7 @@ export default function Home() {
                                         <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 pointer-events-none flex items-center gap-2">
-                                        <p className="font-semibold text-foreground">{u.displayName}</p>
+                                        <p className="font-semibold text-foreground truncate max-w-[200px]">{u.displayName}</p>
                                         {isLikedByCurrentUser && <BadgeCheck className="h-5 w-5 text-blue-500" />}
                                     </div>
                                 </div>
@@ -502,7 +502,7 @@ export default function Home() {
                                         <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
                                           <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
                                             <DialogHeader>
-                                                <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
+                                                <DialogTitle className="truncate max-w-[200px]">Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
                                             </DialogHeader>
                                             <Form {...form}>
                                                 <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4 mt-4">
@@ -553,7 +553,7 @@ export default function Home() {
                                         {feedback.feedback === 'like' ? '👍' : '👎'}
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-semibold text-foreground">{feedback.userName}</p>
+                                        <p className="font-semibold text-foreground truncate max-w-[200px]">{feedback.userName}</p>
                                         <p className="text-xs text-muted-foreground">
                                           {feedback.createdAt ? formatDistanceToNow(feedback.createdAt.toDate(), { addSuffix: false, locale: id })
                                           .replace('kurang dari ', '')
@@ -596,7 +596,7 @@ export default function Home() {
             <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
                 <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
+                        <DialogTitle className="flex items-center gap-2 truncate max-w-[200px]">
                             <History className="h-5 w-5" />
                             Riwayat Tambahan Uang: {viewingUser?.displayName}
                         </DialogTitle>

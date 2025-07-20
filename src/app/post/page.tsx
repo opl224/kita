@@ -438,7 +438,7 @@ export default function PostPage() {
                       <AvatarFallback>{post.userName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                        <p className="font-semibold">{post.userName}</p>
+                        <p className="font-semibold truncate max-w-[200px]">{post.userName}</p>
                         <p className="text-xs text-muted-foreground">
                              {post.createdAt ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: false, locale: id })
                              .replace('kurang dari ', '')
@@ -581,7 +581,7 @@ export default function PostPage() {
                                             <AvatarImage src={liker.avatarUrl} />
                                             <AvatarFallback>{liker.displayName.charAt(0)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-semibold">{liker.displayName}</p>
+                                        <p className="font-semibold truncate max-w-[200px]">{liker.displayName}</p>
                                     </div>
                                 ))
                             ) : (

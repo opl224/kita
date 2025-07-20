@@ -163,7 +163,7 @@ export default function NotificationsPage() {
                                    </div>
                                    <div className="flex-1">
                                        <p className="text-foreground">
-                                           <span className="font-semibold">{invite.invitedBy}</span> mengundang Anda untuk bergabung dengan grup <span className="font-semibold">{invite.groupName}</span>.
+                                           <span className="font-semibold truncate max-w-[200px]">{invite.invitedBy}</span> mengundang Anda untuk bergabung dengan grup <span className="font-semibold">{invite.groupName}</span>.
                                        </p>
                                        <p className="text-xs text-muted-foreground mt-1">
                                            {invite.createdAt ? formatDistanceToNow(invite.createdAt.toDate(), { addSuffix: false, locale: id })
