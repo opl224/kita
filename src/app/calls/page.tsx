@@ -370,7 +370,4 @@ export default function VoiceNoteGroupsPage() {
         />
     </div>
   );
-
-    
-
-
+}
