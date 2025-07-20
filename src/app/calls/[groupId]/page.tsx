@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
 import { getFirebaseApp } from '@/lib/firebase';
@@ -523,32 +523,33 @@ const startRecording = async () => {
                             <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
                         </div>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[90vw] sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Anggota Grup
-                            </DialogTitle>
-                            <DialogDescription>
-                                Daftar semua anggota di grup "{groupInfo?.name}".
-                            </DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="h-72">
-                            <div className="space-y-2 pr-4">
-                            {groupMembersDetails.map(member => (
-                                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
-                                    <Avatar className="h-10 w-10">
-                                        <AvatarImage src={member.avatarUrl} />
-                                        <AvatarFallback>{member.displayName.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <p className="font-semibold truncate max-w-[200px]">{member.displayName}</p>
-                                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
+                        <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Anggota Grup
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Daftar semua anggota di grup "{groupInfo?.name}".
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="h-72 mt-4">
+                                <div className="space-y-3 pr-4">
+                                {groupMembersDetails.map(member => (
+                                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={member.avatarUrl} />
+                                            <AvatarFallback>{member.displayName.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold truncate">{member.displayName}</p>
+                                        </div>
                                     </div>
+                                ))}
                                 </div>
-                            ))}
-                            </div>
-                        </ScrollArea>
+                            </ScrollArea>
+                        </div>
                     </DialogContent>
                 </Dialog>
 
