@@ -138,7 +138,7 @@ const AudioPlayer = ({ src, showDelete, onDelete }: { src: string, showDelete: b
 };
 
 
-export default function GroupChatPage({ params }: { params: { groupId: string } }) {
+export default function GroupChatPage({ params: { groupId } }: { params: { groupId: string } }) {
     const [user, setUser] = useState<User | null>(null);
     const [isSuperUser, setIsSuperUser] = useState(false);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
@@ -161,7 +161,6 @@ export default function GroupChatPage({ params }: { params: { groupId: string } 
     const audioChunksRef = useRef<Blob[]>([]);
     const startTimeRef = useRef<number>(0);
     
-    const { groupId } = params;
     const router = useRouter();
     const app = getFirebaseApp();
     const auth = getAuth(app);
