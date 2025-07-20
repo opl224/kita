@@ -476,7 +476,7 @@ export default function Home() {
                                         <AvatarFallback className="rounded-full">{u.displayName?.charAt(0) || '?'}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <p className="font-semibold text-foreground truncate">{u.displayName}</p>
+                                        <p className="font-semibold text-foreground truncate max-w-[120px]">{u.displayName}</p>
                                         {(u.isSuperUser) && "👑"}
                                         {(!u.isSuperUser && isLikedByCurrentUser) && <BadgeCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />}
                                     </div>
