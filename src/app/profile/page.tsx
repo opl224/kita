@@ -171,7 +171,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-50 max-w-4xl mx-auto">
       <header className="pt-4">
-        <h1 className="text-4xl font-headline font-bold text-foreground truncate max-w-[200px]" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+        <h1 className="text-4xl font-headline font-bold text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
           Profil Saya
         </h1>
       </header>
