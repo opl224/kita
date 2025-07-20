@@ -40,6 +40,9 @@ type Group = {
 const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
 
 const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
+const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
+const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
+
 
 export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, editingGroup: Group | null, onSubmit: (data: GroupFormValues) => void }) {
   const form = useForm<GroupFormValues>({
@@ -64,28 +67,30 @@ export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>{editingGroup ? 'Ubah Nama Grup' : 'Buat Grup Baru'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>{editingGroup ? 'Nama Grup Baru' : 'Nama Grup'}</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Contoh: Tim Proyek Hebat" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit" className="w-full">{editingGroup ? 'Simpan Perubahan' : 'Buat Grup'}</Button>
-                </form>
-            </Form>
+        <DialogContent className="bg-transparent border-none shadow-none sm:max-w-md">
+            <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+                <DialogHeader>
+                    <DialogTitle>{editingGroup ? 'Ubah Nama Grup' : 'Buat Grup Baru'}</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 mt-4">
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{editingGroup ? 'Nama Grup Baru' : 'Nama Grup'}</FormLabel>
+                                <FormControl>
+                                <Input placeholder="Contoh: Tim Proyek Hebat" {...field} className={neumorphicInputStyle} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <Button type="submit" className={`${neumorphicButtonStyle} w-full`}>{editingGroup ? 'Simpan Perubahan' : 'Buat Grup'}</Button>
+                    </form>
+                </Form>
+            </div>
         </DialogContent>
     </Dialog>
   );
@@ -129,10 +134,14 @@ export default function VoiceNoteGroupsPage() {
   
   useEffect(() => {
     const fetchSuperAdminName = async () => {
-        const superUserDocRef = doc(db, 'users', SUPER_USER_UID);
-        const superUserDocSnap = await getDoc(superUserDocRef);
-        if (superUserDocSnap.exists()) {
-            setSuperAdminName(superUserDocSnap.data().displayName || 'Super Admin');
+        try {
+            const superUserDocRef = doc(db, 'users', SUPER_USER_UID);
+            const superUserDocSnap = await getDoc(superUserDocRef);
+            if (superUserDocSnap.exists()) {
+                setSuperAdminName(superUserDocSnap.data().displayName || 'Super Admin');
+            }
+        } catch (error) {
+            console.error("Error fetching super admin name:", error);
         }
     };
     fetchSuperAdminName();
@@ -359,4 +368,5 @@ export default function VoiceNoteGroupsPage() {
         />
     </div>
   );
-}
+
+    
