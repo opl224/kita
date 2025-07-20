@@ -338,7 +338,9 @@ export default function VoiceNoteGroupsPage() {
                     <Card className="flex flex-col items-center justify-center p-12 text-center bg-background rounded-2xl shadow-neumorphic-inset">
                         <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
                         <h3 className="text-xl font-semibold text-foreground">Belum Punya Grup</h3>
-                        <p className="text-muted-foreground">Minta {superAdminName} untuk mengundang ke grup yang sudah ada.</p>
+                        <p className="text-muted-foreground break-words">
+                            Minta <span className="font-semibold text-foreground truncate inline-block align-middle max-w-[200px]">{superAdminName}</span> untuk mengundang ke grup yang sudah ada.
+                        </p>
                     </Card>
                 )}
             </main>
@@ -370,3 +372,4 @@ export default function VoiceNoteGroupsPage() {
   );
 
     
+
