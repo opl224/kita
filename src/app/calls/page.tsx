@@ -39,7 +39,7 @@ type Group = {
 
 const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
 
-const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 p-6 border-none";
+const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
@@ -262,7 +262,7 @@ export default function VoiceNoteGroupsPage() {
                 {groups.length > 0 ? (
                     groups.map(group => (
                     <Card key={group.id} className={neumorphicCardStyle} onClick={() => handleGroupClick(group.id)}>
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 p-6">
                         <div className="flex items-start justify-between gap-2">
                             <h2 className="text-xl font-headline font-semibold text-foreground truncate max-w-[200px]">{group.name}</h2>
                             {(isSuperUser || user?.uid === group.createdBy) && (
