@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const moneyFormSchema = z.object({
   amount: z.coerce.number().positive("Jumlah harus lebih dari 0."),
@@ -592,39 +593,43 @@ export default function Home() {
 
         {/* Dialog for viewing user contribution history */}
         <Dialog open={!!viewingUser} onOpenChange={(isOpen) => !isOpen && setViewingUser(null)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <History className="h-5 w-5" />
-                        Riwayat Tambahan Uang: {viewingUser?.displayName}
-                    </DialogTitle>
-                </DialogHeader>
-                <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
-                    {loadingContributions ? (
-                        <CustomLoader />
-                    ) : userContributions.length > 0 ? (
-                        userContributions.map(contrib => (
-                            <div key={contrib.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                                <span className="font-medium text-foreground">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(contrib.amount)}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    {contrib.createdAt ? format(contrib.createdAt.toDate(), 'd MMM yyyy, HH:mm', { locale: id }) : ''}
-                                </span>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-center text-muted-foreground py-8">Belum ada riwayat tambahan uang untuk pengguna ini.</p>
-                    )}
+            <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
+                <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5" />
+                            Riwayat Tambahan Uang: {viewingUser?.displayName}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="h-72 mt-4">
+                        <div className="space-y-3 pr-4">
+                            {loadingContributions ? (
+                                <CustomLoader />
+                            ) : userContributions.length > 0 ? (
+                                userContributions.map(contrib => (
+                                    <div key={contrib.id} className="flex justify-between items-center p-3 rounded-lg bg-background shadow-neumorphic-inset">
+                                        <span className="font-medium text-foreground">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(contrib.amount)}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {contrib.createdAt ? format(contrib.createdAt.toDate(), 'd MMM yyyy, HH:mm', { locale: id }) : ''}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-muted-foreground py-8">Belum ada riwayat tambahan uang untuk pengguna ini.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter className="pt-4 border-t mt-4">
+                        <div className="w-full flex justify-between items-center">
+                            <span className="font-semibold text-lg">Total</span>
+                            <span className="font-bold text-lg text-primary">
+                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalUserContribution)}
+                            </span>
+                        </div>
+                    </DialogFooter>
                 </div>
-                 <DialogFooter className="pt-4 border-t">
-                    <div className="w-full flex justify-between items-center">
-                        <span className="font-semibold text-lg">Total</span>
-                        <span className="font-bold text-lg text-primary">
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalUserContribution)}
-                        </span>
-                    </div>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     </div>
