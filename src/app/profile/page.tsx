@@ -190,20 +190,22 @@ export default function ProfilePage() {
                             <span className="sr-only">Info Aplikasi</span>
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className={cn("bg-background rounded-2xl shadow-neumorphic-outset border-none")}>
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-headline">Informasi Aplikasi</DialogTitle>
-                        </DialogHeader>
-                        <div className="text-sm space-y-3 text-foreground">
-                        <p className="text-center">Aplikasi ini dibuat tidak tau tujuannya apa cuma iseng aja.</p>
-                          <br/>
-                        <strong>Teknologi yang digunakan</strong>
-                        <p>Framework Nextjs, Tailwind CSS dan ShadCN UI dan juga menggunakan Bahasa Pemrograman TypeScript dan JavaScript.</p>
-                          <br/>
-                        <strong>Desain dan Tulisan</strong>
-                        <p>Menggunakan gaya <strong>Neumorphism</strong> dan tulisan standar Poppins.</p>
-                        <br/>
-                        <strong>Penting: </strong><strong>Jika ada BUG berarti itu fitur!</strong>
+                    <DialogContent className="bg-transparent border-none shadow-none sm:max-w-md">
+                        <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-headline">Informasi Aplikasi</DialogTitle>
+                            </DialogHeader>
+                            <div className="text-sm space-y-3 text-foreground">
+                            <p className="text-center">Aplikasi ini dibuat tidak tau tujuannya apa cuma iseng aja.</p>
+                            <br/>
+                            <strong>Teknologi yang digunakan</strong>
+                            <p>Framework Nextjs, Tailwind CSS dan ShadCN UI dan juga menggunakan Bahasa Pemrograman TypeScript dan JavaScript.</p>
+                            <br/>
+                            <strong>Desain dan Tulisan</strong>
+                            <p>Menggunakan gaya <strong>Neumorphism</strong> dan tulisan standar Poppins.</p>
+                            <br/>
+                            <strong>Penting: </strong><strong>Jika ada BUG berarti itu fitur!</strong>
+                            </div>
                         </div>
                     </DialogContent>
                 </Dialog>
