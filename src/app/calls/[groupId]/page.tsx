@@ -9,7 +9,7 @@ import { getFirebaseApp } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, UserCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, UserCheck, Loader2, Users } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';
@@ -148,10 +148,13 @@ export default function GroupChatPage() {
     
     // Invite users state
     const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+    const [isMembersDialogOpen, setIsMembersDialogOpen] = useState(false);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
     const [pendingInviteUserIds, setPendingInviteUserIds] = useState<Set<string>>(new Set());
     const [nonMemberUsers, setNonMemberUsers] = useState<AppUser[]>([]);
     const [invitingUsers, setInvitingUsers] = useState<Set<string>>(new Set());
+    const [groupMembersDetails, setGroupMembersDetails] = useState<AppUser[]>([]);
+
 
     // Recording states
     const [isRecording, setIsRecording] = useState(false);
@@ -231,18 +234,37 @@ export default function GroupChatPage() {
 
         setLoading(true);
         const groupDocRef = doc(db, 'groups', groupId);
-        const getGroupInfo = async () => {
+        
+        const fetchGroupData = async () => {
             try {
                 const docSnap = await getDoc(groupDocRef);
                 if (docSnap.exists()) {
                     const groupData = docSnap.data() as GroupInfo;
-                    setGroupInfo(groupData);
 
                     if (!groupData.members.includes(user.uid)) {
                        console.error("Access Denied: User is not a member of this group.");
                        router.push('/calls');
                        return;
                     }
+                    setGroupInfo(groupData);
+                    
+                    // Fetch member details
+                    if (groupData.members.length > 0) {
+                        const usersCollection = collection(db, 'users');
+                        const memberDetails: AppUser[] = [];
+                        
+                        // Firestore 'in' query supports up to 30 elements
+                        for (let i = 0; i < groupData.members.length; i += 30) {
+                            const chunk = groupData.members.slice(i, i + 30);
+                            const usersQuery = query(usersCollection, where(documentId(), 'in', chunk));
+                            const usersSnapshot = await getDocs(usersQuery);
+                            usersSnapshot.docs.forEach(doc => {
+                                memberDetails.push({ id: doc.id, ...doc.data() } as AppUser);
+                            });
+                        }
+                        setGroupMembersDetails(memberDetails);
+                    }
+
                 } else {
                     console.error("Group not found");
                     router.push('/calls');
@@ -254,7 +276,7 @@ export default function GroupChatPage() {
                 setLoading(false);
             }
         };
-        getGroupInfo();
+        fetchGroupData();
 
         const messagesColRef = collection(db, 'groups', groupId, 'messages');
         const q = query(messagesColRef, orderBy('createdAt', 'asc'));
@@ -494,10 +516,42 @@ const startRecording = async () => {
                 <Button variant="ghost" size="icon" onClick={() => router.push('/calls')}>
                     <ArrowLeft />
                 </Button>
-                <div className="ml-4">
-                    <h1 className="text-xl font-bold font-headline truncate max-w-[200px]">{groupInfo?.name || 'Grup'}</h1>
-                    <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
-                </div>
+                <Dialog open={isMembersDialogOpen} onOpenChange={setIsMembersDialogOpen}>
+                    <DialogTrigger asChild>
+                        <div className="ml-4 cursor-pointer">
+                            <h1 className="text-xl font-bold font-headline truncate max-w-[200px]">{groupInfo?.name || 'Grup'}</h1>
+                            <p className="text-xs text-muted-foreground">{groupInfo?.members.length} anggota</p>
+                        </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-[90vw] sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Users className="h-5 w-5" />
+                                Anggota Grup
+                            </DialogTitle>
+                            <DialogDescription>
+                                Daftar semua anggota di grup "{groupInfo?.name}".
+                            </DialogDescription>
+                        </DialogHeader>
+                        <ScrollArea className="h-72">
+                            <div className="space-y-2 pr-4">
+                            {groupMembersDetails.map(member => (
+                                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={member.avatarUrl} />
+                                        <AvatarFallback>{member.displayName.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                        <p className="font-semibold truncate max-w-[200px]">{member.displayName}</p>
+                                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    </DialogContent>
+                </Dialog>
+
                  {isSuperUser && (
                     <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
                         <DialogTrigger asChild>
