@@ -346,6 +346,8 @@ export default function Home() {
   
   const neumorphicCardStyle = "bg-background rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
   const neumorphicInsetStyle = "bg-background rounded-2xl shadow-neumorphic-inset";
+  const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
+  const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
   const totalUserPages = Math.ceil(allUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = allUsers.slice((allUsersPage - 1) * ITEMS_PER_PAGE, allUsersPage * ITEMS_PER_PAGE);
   const showFeedbackCard = userData && !isSuperUser && userData.hasGivenFeedback === false;
@@ -496,28 +498,30 @@ export default function Home() {
                                                 <Plus className="h-5 w-5 text-primary-foreground" />
                                             </Button>
                                         </DialogTrigger>
-                                        <DialogContent>
+                                        <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
+                                          <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
                                             <DialogHeader>
                                                 <DialogTitle>Tambah Uang untuk {editingUser?.displayName}</DialogTitle>
                                             </DialogHeader>
                                             <Form {...form}>
-                                                <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4">
+                                                <form onSubmit={form.handleSubmit(handleAddMoney)} className="space-y-4 mt-4">
                                                     <FormField
                                                         control={form.control}
                                                         name="amount"
                                                         render={({ field }) => (
                                                             <FormItem>
-                                                                <FormLabel>Jumlah (IDR)</FormLabel>
+                                                                <FormLabel className="text-muted-foreground">Jumlah (IDR)</FormLabel>
                                                                 <FormControl>
-                                                                    <Input type="number" {...field} />
+                                                                    <Input type="number" {...field} className={neumorphicInputStyle} />
                                                                 </FormControl>
                                                                 <FormMessage />
                                                             </FormItem>
                                                         )}
                                                     />
-                                                    <Button type="submit" className="w-full">Tambah</Button>
+                                                    <Button type="submit" className={`${neumorphicButtonStyle} w-full`}>Tambah</Button>
                                                 </form>
                                             </Form>
+                                          </div>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
