@@ -74,6 +74,7 @@ export default {
       boxShadow: {
         'neumorphic-outset': '8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light)',
         'neumorphic-inset': 'inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light)',
+        'neumorphic-deep': '15px 15px 30px var(--shadow-dark-deep), -15px -15px 30px var(--shadow-light-deep)',
       },
       keyframes: {
         'accordion-down': {

@@ -39,7 +39,7 @@ type Group = {
 
 const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
 
-const neumorphicCardStyle = "bg-background relative rounded-2xl shadow-neumorphic-outset transition-all duration-300 border-none";
+const neumorphicCardStyle = "bg-background relative rounded-[30px] shadow-neumorphic-deep transition-all duration-300 border-none";
 const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
 const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
 
