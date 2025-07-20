@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
 import { getFirebaseApp } from '@/lib/firebase';
@@ -138,7 +138,7 @@ const AudioPlayer = ({ src, showDelete, onDelete }: { src: string, showDelete: b
 };
 
 
-export default function GroupChatPage() {
+export default function GroupChatPage({ params }: { params: { groupId: string } }) {
     const [user, setUser] = useState<User | null>(null);
     const [isSuperUser, setIsSuperUser] = useState(false);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
@@ -161,8 +161,7 @@ export default function GroupChatPage() {
     const audioChunksRef = useRef<Blob[]>([]);
     const startTimeRef = useRef<number>(0);
     
-    const params = useParams();
-    const groupId = params.groupId as string;
+    const { groupId } = params;
     const router = useRouter();
     const app = getFirebaseApp();
     const auth = getAuth(app);
