@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
 import { getFirebaseApp } from '@/lib/firebase';
@@ -138,7 +138,8 @@ const AudioPlayer = ({ src, showDelete, onDelete }: { src: string, showDelete: b
 };
 
 
-export default function GroupChatPage({ params: { groupId } }: { params: { groupId: string } }) {
+export default function GroupChatPage() {
+    const { groupId } = useParams<{ groupId: string }>();
     const [user, setUser] = useState<User | null>(null);
     const [isSuperUser, setIsSuperUser] = useState(false);
     const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
