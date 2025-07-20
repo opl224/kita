@@ -361,12 +361,14 @@ export default function Home() {
       <header className="flex justify-between items-center relative">
         <div>
           <p className="text-muted-foreground">Selamat Datang,</p>
-          <h1 className="text-3xl font-headline font-bold text-foreground flex items-center gap-2 truncate max-w-[200px]">
-            {userData?.displayName || 'Pengguna'}
-            {isSuperUser && "👑"}
-            {!isSuperUser && (userData?.likedBy?.length ?? 0) > 0 && (
-                <BadgeCheck className="h-6 w-6 text-blue-500" />
-            )}
+          <h1 className="text-3xl font-headline font-bold text-foreground">
+            <div className="flex items-center gap-2">
+                <span className="truncate max-w-[200px]">{userData?.displayName || 'Pengguna'}</span>
+                {isSuperUser && "👑"}
+                {!isSuperUser && (userData?.likedBy?.length ?? 0) > 0 && (
+                    <BadgeCheck className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                )}
+            </div>
           </h1>
         </div>
         <div className="flex items-center gap-4">
@@ -596,9 +598,9 @@ export default function Home() {
             <DialogContent className="bg-transparent border-none shadow-none max-w-[90vw] sm:max-w-md">
                 <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 truncate max-w-[200px]">
+                        <DialogTitle className="flex items-center gap-2">
                             <History className="h-5 w-5" />
-                            Riwayat Tambahan Uang: {viewingUser?.displayName}
+                            <span className="truncate max-w-[200px]">Riwayat Tambahan Uang: {viewingUser?.displayName}</span>
                         </DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="h-72 mt-4">
