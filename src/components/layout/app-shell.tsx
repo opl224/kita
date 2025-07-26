@@ -195,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Hanya untuk Seluler
           </h1>
           <p className="text-muted-foreground text-lg">
-            Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel Anda.
+            Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel menggunakan aplikasi ini.
           </p>
         </div>
       </div>
