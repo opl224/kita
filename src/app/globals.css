@@ -32,8 +32,8 @@ body {
     
     --shadow-light: hsl(0 0% 100%);
     --shadow-dark: hsl(215 28% 68%);
-    --shadow-light-deep: hsl(0 0% 100% / 0); /* Invisible in light mode */
-    --shadow-dark-deep: hsl(0 0% 0% / 0); /* Invisible in light mode */
+    --shadow-light-deep: hsl(0 0% 100%);
+    --shadow-dark-deep: hsl(215 28% 68%);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
