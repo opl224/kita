@@ -115,17 +115,18 @@ export default function VoiceNoteGroupsPage() {
 
    useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        if (currentUser) {
-            setUser(currentUser);
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-                setIsSuperUser(!!userDocSnap.data().isSuperUser);
-            }
-        } else {
+        if (!currentUser) {
             setUser(null);
             setIsSuperUser(false);
             router.push('/login');
+            return;
+        }
+
+        setUser(currentUser);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            setIsSuperUser(!!userDocSnap.data().isSuperUser);
         }
     });
 
