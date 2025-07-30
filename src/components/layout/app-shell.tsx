@@ -104,33 +104,67 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
 
   // Anti-inspect logic
-    useEffect(() => {
-        const antiDebug = () => {
-            const check = () => {
-                // A simple check to see if dev tools are open.
-                // It's not foolproof but deters casual inspection.
-                if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
-                    debugger;
-                }
-            };
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        alert('Fitur ini dinonaktifkan.');
+      };
 
-            const intervalId = setInterval(check, 1000);
-            return () => clearInterval(intervalId);
-        };
-        
-        // Only run in production
-        if (process.env.NODE_ENV === 'production') {
-            const cleanup = antiDebug();
-            
-            const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-            document.addEventListener('contextmenu', handleContextMenu);
-
-            return () => {
-                cleanup();
-                document.removeEventListener('contextmenu', handleContextMenu);
-            };
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Blokir F12
+        if (e.key === 'F12' || e.keyCode === 123) {
+          e.preventDefault();
+          return false;
         }
-    }, []);
+        // Blokir Ctrl+Shift+I
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
+          e.preventDefault();
+          return false;
+        }
+        // Blokir Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
+          e.preventDefault();
+          return false;
+        }
+        // Blokir Ctrl+Shift+J
+        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
+          e.preventDefault();
+          return false;
+        }
+        // Blokir Ctrl+U (view source)
+        if (e.ctrlKey && (e.key === 'U' || e.keyCode === 85)) {
+          e.preventDefault();
+          return false;
+        }
+        // Blokir Ctrl+S (save page)
+        if (e.ctrlKey && (e.key === 'S' || e.keyCode === 83)) {
+          e.preventDefault();
+          return false;
+        }
+      };
+      
+      const antiDebug = () => {
+        const check = () => {
+          if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
+            debugger;
+          }
+        };
+        const intervalId = setInterval(check, 1000);
+        return () => clearInterval(intervalId);
+      };
+
+      document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyDown);
+      const cleanupAntiDebug = antiDebug();
+
+      return () => {
+        document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('keydown', handleKeyDown);
+        cleanupAntiDebug();
+      };
+    }
+  }, []);
 
   // Reset back press count whenever the page changes
   useEffect(() => {
