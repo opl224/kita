@@ -103,6 +103,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isAuthRequired, isAuthPage, pathname, router]);
 
+  // Anti-inspect logic
+    useEffect(() => {
+        const antiDebug = () => {
+            const check = () => {
+                // A simple check to see if dev tools are open.
+                // It's not foolproof but deters casual inspection.
+                if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
+                    debugger;
+                }
+            };
+
+            const intervalId = setInterval(check, 1000);
+            return () => clearInterval(intervalId);
+        };
+        
+        // Only run in production
+        if (process.env.NODE_ENV === 'production') {
+            const cleanup = antiDebug();
+            
+            const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+            document.addEventListener('contextmenu', handleContextMenu);
+
+            return () => {
+                cleanup();
+                document.removeEventListener('contextmenu', handleContextMenu);
+            };
+        }
+    }, []);
+
   // Reset back press count whenever the page changes
   useEffect(() => {
     backPressCountRef.current = 0;
@@ -195,7 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Hanya untuk Seluler
           </h1>
           <p className="text-muted-foreground text-lg">
-            Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel menggunakan aplikasi ini.
+            Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel untuk menggunakan aplikasi ini.
           </p>
         </div>
       </div>

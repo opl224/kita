@@ -1,59 +1,165 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isSuperUser() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    match /users/{userId} {
-      allow read;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId || isSuperUser();
-      
-      match /notifications/{notificationId} {
-        allow read: if request.auth.uid == userId;
-        allow create: if isSuperUser();
-      }
+    // Helper function to check if the user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
     
+    // Helper function to check if the user is a super user
+    function isSuperUser() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperUser == true;
+    }
+
+    // USERS collection
+    match /users/{userId} {
+      // Anyone can create their own user document during signup
+      allow create: if isOwner(userId) &&
+                       request.resource.data.displayName is string &&
+                       request.resource.data.displayName.size() >= 4 &&
+                       request.resource.data.email == request.auth.token.email;
+
+      // Only the authenticated owner can read their own data
+      // Super users can read any user's data
+      allow get: if isAuthenticated() && (isOwner(userId) || isSuperUser());
+      allow list: if isAuthenticated() && isSuperUser(); // Only super users can list all users
+
+      // Users can update their own displayName and avatarUrl
+      // Super users can update other users' fields (like totalReceived or likedBy)
+      allow update: if isAuthenticated() && 
+                       (
+                         (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'avatarUrl', 'lastSeenNotifications', 'lastSeenCalls', 'hasGivenFeedback'])) ||
+                         (isSuperUser() && request.resource.data.diff(resource.data).affectedKeys().hasAny(['totalReceived', 'likedBy']))
+                       );
+
+      // No one can delete user documents for safety
+      allow delete: if false;
+      
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        // Only the system (via a trusted server/admin SDK) should create notifications
+        allow create: if isSuperUser(); 
+        // Users can read their own notifications
+        allow read: if isOwner(userId);
+        // Notifications are immutable
+        allow update, delete: if false;
+      }
+    }
+
+    // APPSTATE collection
     match /appState/main {
-      allow read: if request.auth.uid != null;
+      // Only super users can modify the app state (like totalCollected)
+      allow read: if isAuthenticated();
       allow write: if isSuperUser();
     }
-    
-    match /userFeedback/{feedbackId} {
-        allow read: if isSuperUser();
-        allow create: if request.auth.uid == request.resource.data.userId;
-    }
 
+    // POSTS collection
     match /posts/{postId} {
-        allow read: if request.auth.uid != null;
-        allow create: if request.auth.uid == request.resource.data.userId;
-        allow update: if (request.auth.uid == resource.data.userId) || 
-                       (request.auth.uid != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']));
-        allow delete: if request.auth.uid == resource.data.userId;
-    }
-    
-    match /groups/{groupId} {
-      allow list, read: if request.auth.uid in resource.data.members;
-      allow create: if isSuperUser() || request.auth.uid == request.resource.data.createdBy;
-      allow update: if (isSuperUser() || request.auth.uid == resource.data.createdBy) ||
-                       (request.auth.uid in request.resource.data.members && !(request.auth.uid in resource.data.members));
-      allow delete: if isSuperUser() || request.auth.uid == resource.data.createdBy;
+      // Any authenticated user can read all posts
+      allow get, list: if isAuthenticated();
 
-      match /messages/{messageId} {
-          allow read: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
-          allow create: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
-          allow delete: if request.auth.uid == resource.data.senderId;
-      }
+      // Any authenticated user can create a post, with validation
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.caption is string &&
+                       request.resource.data.caption.size() <= 500 &&
+                       (!('imageUrl' in request.resource.data) || request.resource.data.imageUrl is string) &&
+                       request.resource.data.likes is list &&
+                       request.resource.data.likes.size() == 0;
+
+      // Users can update their own posts (caption, likes)
+      allow update: if isAuthenticated() &&
+                       (
+                         // Owner can update the caption
+                         (resource.data.userId == request.auth.uid && request.resource.data.caption != resource.data.caption) ||
+                         // Any user can like/unlike a post
+                         (request.resource.data.likes.size() == resource.data.likes.size() + 1 || request.resource.data.likes.size() == resource.data.likes.size() - 1)
+                       );
+
+      // Only the owner can delete their post
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
     
-    match /invitations/{invitationId} {
-        allow read: if request.auth.uid == resource.data.userId;
-        allow create: if isSuperUser();
-        allow update: if request.auth.uid == resource.data.userId;
+    // USERFEEDBACK collection
+    match /userFeedback/{feedbackId} {
+        // Any authenticated user who hasn't given feedback yet can create one
+        allow create: if isAuthenticated() && 
+                         request.resource.data.userId == request.auth.uid &&
+                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hasGivenFeedback == false;
+        
+        // Only super users can read feedback
+        allow read: if isSuperUser();
+        allow update, delete: if false;
     }
+
+    // GROUPS collection
+    match /groups/{groupId} {
+        // User must be a member to read group info and messages
+        function isGroupMember() {
+            return request.auth.uid in resource.data.members;
+        }
+
+        // Allow read if user is a member
+        allow get: if isAuthenticated() && isGroupMember();
+        
+        // Allow list only for members, this is what powers the group list page
+        allow list: if isAuthenticated() && request.auth.uid in query.filters[0].value;
+        
+        // Only super users can create groups
+        allow create: if isSuperUser() && request.resource.data.createdBy == request.auth.uid;
+        
+        // Updating group:
+        // - Super users can update the name
+        // - System can add new members (via invitations)
+        allow update: if isAuthenticated() && 
+                       (
+                         (isSuperUser() && request.resource.data.name != resource.data.name) ||
+                         (request.resource.data.members.size() == resource.data.members.size() + 1) || // For accepting invites
+                         (request.resource.data.lastMessage is string) // For updating last message
+                       );
+
+        // Only super users can delete groups
+        allow delete: if isSuperUser();
+        
+        // MESSAGES subcollection
+        match /messages/{messageId} {
+            // User must be a member to read/write messages
+            allow read, write: if isAuthenticated() && isGroupMember();
+            
+            // Allow delete only for the sender within a 5-minute window
+            allow delete: if isAuthenticated() && 
+                             isGroupMember() && 
+                             resource.data.senderId == request.auth.uid &&
+                             request.time < resource.data.createdAt + duration.value(5, 'm');
+        }
+    }
+    
+    // INVITATIONS collection
+    match /invitations/{invitationId} {
+        // Super users can create invitations
+        allow create: if isSuperUser();
+        
+        // The invited user can read their own invitation
+        // Super users can read any invitation
+        allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || isSuperUser());
+        
+        // The invited user can update the status to 'accepted' or 'rejected'
+        allow update: if isAuthenticated() &&
+                         resource.data.userId == request.auth.uid &&
+                         (request.resource.data.status == 'accepted' || request.resource.data.status == 'rejected');
+
+        // No one can list or delete invitations directly
+        allow list, delete: if false;
+    }
+
   }
 }
