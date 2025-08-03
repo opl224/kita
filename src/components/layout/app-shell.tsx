@@ -252,7 +252,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             autoplay={true}
             className="w-96 h-96"
         />
-        <p className="text-muted-foreground mt-4">Buka di perangkat seluler untuk pengalaman terbaik.</p>
+        <p className="text-muted-foreground text-bold mt-4">Buka di perangkat seluler untuk membuka aplikasi.</p>
       </div>
     );
   }
