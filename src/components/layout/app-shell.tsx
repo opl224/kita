@@ -4,7 +4,7 @@
 import React, { useState, TouchEvent, useEffect, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Smartphone, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
@@ -120,12 +120,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (
-          e.key === 'F12' ||
-          (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
-          (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) ||
-          (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) ||
-          (e.ctrlKey && (e.key === 'U' || e.key === 'u')) ||
-          (e.ctrlKey && (e.key === 'S' || e.key === 's'))
+          e.key === 'F12' || e.keyCode === 123 ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) ||
+          (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) ||
+          (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.keyCode === 83))
         ) {
           e.preventDefault();
         }
@@ -135,10 +135,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const check = () => {
           function checkDebugger() {
             const start = new Date().getTime();
+            // eslint-disable-next-line no-debugger
             debugger;
             const end = new Date().getTime();
             if (end - start > 100) {
-              // DevTools are open
+              // DevTools are likely open
             }
           }
           checkDebugger();
@@ -247,11 +248,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Lottie 
             path="/lottie-animations/404-kitty.json"
-            loop={true} 
-            className="w-64 h-64"
+            loop={true}
+            className="w-96 h-96"
         />
-        <h1 className="text-2xl font-bold mt-4">Hanya untuk Seluler</h1>
-        <p className="text-muted-foreground">Silakan buka aplikasi ini di perangkat seluler.</p>
+        <p className="text-muted-foreground mt-4">Buka di perangkat seluler untuk pengalaman terbaik.</p>
       </div>
     );
   }
