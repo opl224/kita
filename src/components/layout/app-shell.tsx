@@ -247,8 +247,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Lottie 
-            path="/lottie-animations/404-kitty.json"
+            path="/lottie-animations/404_kitty.json"
             loop={true}
+            autoplay={true}
             className="w-96 h-96"
         />
         <p className="text-muted-foreground mt-4">Buka di perangkat seluler untuk pengalaman terbaik.</p>
