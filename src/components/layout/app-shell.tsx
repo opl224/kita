@@ -128,15 +128,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
            (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) ||
            (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.keyCode === 83))) {
           e.preventDefault();
+          alert('Fitur ini dinonaktifkan.');
           return false;
         }
       };
       
       const antiDebug = () => {
         const check = () => {
-          if ((window.outerWidth - window.innerWidth) > 100 || (window.outerHeight - window.innerHeight) > 100) {
-            debugger;
-          }
           function checkDebugger() {
             const start = new Date().getTime();
             debugger;
