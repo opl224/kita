@@ -120,33 +120,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       };
 
       const handleKeyDown = (e: KeyboardEvent) => {
-        // Blokir F12
-        if (e.key === 'F12' || e.keyCode === 123) {
-          e.preventDefault();
-          return false;
-        }
-        // Blokir Ctrl+Shift+I
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
-          e.preventDefault();
-          return false;
-        }
-        // Blokir Ctrl+Shift+C
-        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
-          e.preventDefault();
-          return false;
-        }
-        // Blokir Ctrl+Shift+J
-        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
-          e.preventDefault();
-          return false;
-        }
-        // Blokir Ctrl+U (view source)
-        if (e.ctrlKey && (e.key === 'U' || e.keyCode === 85)) {
-          e.preventDefault();
-          return false;
-        }
-        // Blokir Ctrl+S (save page)
-        if (e.ctrlKey && (e.key === 'S' || e.keyCode === 83)) {
+        // Blokir F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J, Ctrl+U, Ctrl+S
+        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'C', 'J'].includes(e.key.toUpperCase())) || (e.ctrlKey && ['U', 'S'].includes(e.key.toUpperCase()))) {
           e.preventDefault();
           return false;
         }
