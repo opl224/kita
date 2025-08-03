@@ -24,7 +24,6 @@ import {
 import { Button } from '../ui/button';
 import { CreatePostDialog } from '@/app/post/page';
 import Lottie from "lottie-react";
-import kittyAnimation from '../../../public/lottie-animations/404-kitty.json';
 
 
 const SWIPE_THRESHOLD = 50;
@@ -120,16 +119,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       };
 
       const handleKeyDown = (e: KeyboardEvent) => {
-        // Blokir F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J, Ctrl+U, Ctrl+S
-        if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123 ||
-           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) ||
-           (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) ||
-           (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) ||
-           (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) ||
-           (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.keyCode === 83))) {
+        if (
+          e.key === 'F12' ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) ||
+          (e.ctrlKey && (e.key === 'U' || e.key === 'u')) ||
+          (e.ctrlKey && (e.key === 'S' || e.key === 's'))
+        ) {
           e.preventDefault();
-          alert('Fitur ini dinonaktifkan.');
-          return false;
         }
       };
       
@@ -248,10 +246,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Lottie 
-            animationData={kittyAnimation} 
+            path="/lottie-animations/404-kitty.json"
             loop={true} 
             className="w-64 h-64"
         />
+        <h1 className="text-2xl font-bold mt-4">Hanya untuk Seluler</h1>
+        <p className="text-muted-foreground">Silakan buka aplikasi ini di perangkat seluler.</p>
       </div>
     );
   }
