@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '../ui/button';
 import { CreatePostDialog } from '@/app/post/page';
+import Lottie from "lottie-react";
+import kittyAnimation from '../../../public/lottie-animations/404-kitty.json';
+
 
 const SWIPE_THRESHOLD = 50;
 
@@ -86,11 +89,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        if (isAuthRequired) {
+          router.push('/login');
+        }
+      }
       setUser(currentUser);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, isAuthRequired, router]);
 
   useEffect(() => {
     if (loading) return;
@@ -253,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <div className="text-center p-8 max-w-md bg-card rounded-2xl shadow-neumorphic-outset">
-          <Smartphone className="mx-auto h-24 w-24 text-primary mb-6" />
+          <Lottie animationData={kittyAnimation} loop={true} className="mx-auto h-48 w-48" />
           <h1 className="text-3xl font-bold font-headline mb-2 text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
             Hanya untuk Seluler
           </h1>
