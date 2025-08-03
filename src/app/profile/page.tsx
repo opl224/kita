@@ -19,7 +19,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Camera, Moon, Sun, Info, Loader2 } from "lucide-react";
 import { CustomLoader } from "@/components/layout/loader";
-import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
 
 const profileFormSchema = z.object({
@@ -76,6 +75,8 @@ export default function ProfilePage() {
       if (!currentUser) {
         router.push('/login');
         setLoading(false);
+        setUser(null);
+        setUserData(null);
         return;
       }
       
@@ -161,10 +162,10 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return null;
+    return <CustomLoader />;
   }
   
-  if (!userData) {
+  if (!userData || !user) {
     return <CustomLoader />;
   }
 

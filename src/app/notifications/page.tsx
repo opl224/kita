@@ -10,7 +10,6 @@ import { getFirebaseApp } from "@/lib/firebase";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
-import { CustomLoader } from "@/components/layout/loader";
 
 type Notification = {
   id: string;
@@ -42,6 +41,8 @@ export default function NotificationsPage() {
       setUser(currentUser);
       if (!currentUser) {
         setLoading(false);
+        setNotifications([]);
+        setInvitations([]);
       }
     });
     return () => unsubscribeAuth();
@@ -50,8 +51,6 @@ export default function NotificationsPage() {
   // Effect to fetch notifications, invitations and update last seen timestamp
   useEffect(() => {
     if (!user) {
-        setNotifications([]);
-        setInvitations([]);
         return;
     }
 

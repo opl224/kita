@@ -4,12 +4,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, arrayUnion, deleteDoc, getDocs, where, documentId, writeBatch } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, deleteDoc, getDocs, where, documentId } from 'firebase/firestore';
 import { getFirebaseApp } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, UserCheck, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, Loader2, Users } from 'lucide-react';
 import OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';

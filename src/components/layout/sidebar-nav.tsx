@@ -7,7 +7,7 @@ import { Home, AudioWaveform, Bell, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState }from 'react';
-import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, where, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseApp } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -41,8 +41,6 @@ export function SidebarNav() {
   const [newGeneralNotificationsCount, setNewGeneralNotificationsCount] = useState(0);
   const [newCallNotificationsCount, setNewCallNotificationsCount] = useState(0);
   
-  const [combinedNotificationCount, setCombinedNotificationCount] = useState(0);
-
   const app = getFirebaseApp();
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -155,12 +153,6 @@ export function SidebarNav() {
     return () => unsubscribeGroups();
   }, [user, db, lastSeen.calls, pathname]);
 
-  // Effect to combine notification counts for display
-  useEffect(() => {
-    setCombinedNotificationCount(newGeneralNotificationsCount + newCallNotificationsCount);
-  }, [newGeneralNotificationsCount, newCallNotificationsCount]);
-
-
   const neumorphicBase = "transition-all duration-300 rounded-xl";
   const neumorphicButton = `bg-background shadow-neumorphic-outset ${neumorphicBase}`;
   const activeNeumorphicButton = `bg-background shadow-neumorphic-inset text-primary ${neumorphicBase}`;
@@ -205,4 +197,3 @@ export function SidebarNav() {
     </TooltipProvider>
   );
 }
-

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Plus, Heart, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, MessageSquareQuote, History, Gift, BadgeCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs, arrayUnion, arrayRemove } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, runTransaction, query, where, onSnapshot, setDoc, orderBy, getDocs, arrayUnion, arrayRemove, documentId } from "firebase/firestore";
 import { getFirebaseApp } from "@/lib/firebase";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomLoader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { useDialogBackButton } from "@/components/layout/app-shell";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -131,7 +131,6 @@ export default function Home() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [allUsersPage, setAllUsersPage] = useState(1);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [userContributions, setUserContributions] = useState<Contribution[]>([]);
   const [loadingContributions, setLoadingContributions] = useState(false);
@@ -155,6 +154,8 @@ export default function Home() {
         setUser(currentUser);
       } else {
         router.push('/login');
+        setUser(null);
+        setUserData(null);
       }
     });
 
@@ -163,7 +164,6 @@ export default function Home() {
   
     useEffect(() => {
         if (!user) {
-            setUserData(null);
             return;
         }
 
@@ -315,10 +315,6 @@ export default function Home() {
     } catch (error) {
         console.error("Error submitting feedback:", error);
     }
-  };
-
-  const handleLogout = () => {
-    setIsLogoutDialogOpen(true);
   };
   
     const handleLikeUser = async (targetUserId: string, shouldLike: boolean) => {
@@ -578,24 +574,6 @@ export default function Home() {
           )}
         </aside>
       </main>
-
-        <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Apakah Anda yakin ingin keluar dari aplikasi? Anda akan dikembalikan ke halaman login.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setIsLogoutDialogOpen(false)}>Batal</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => {
-                      setIsLogoutDialogOpen(false);
-                      auth.signOut();
-                    }}>Keluar</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
 
         {/* Dialog for viewing user contribution history */}
         <Dialog open={!!viewingUser} onOpenChange={(isOpen) => !isOpen && setViewingUser(null)}>

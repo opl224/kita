@@ -11,13 +11,12 @@ import { Upload, X, Plus, Heart, MoreVertical, Edit, Trash2, Eye, Loader2, Type 
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, where, getDocs, documentId } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirebaseApp } from '@/lib/firebase';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { CustomLoader } from '@/components/layout/loader';
 import { useDialogBackButton } from '@/components/layout/app-shell';
 import { cn } from '@/lib/utils';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -212,7 +211,7 @@ export function CreatePostDialog({ open, onOpenChange, user }: { open: boolean, 
                         <Image
                             src={imagePreview}
                             alt="Pratinjau gambar"
-                            layout="fill"
+                            fill
                             objectFit="contain"
                             unoptimized
                         />
@@ -303,13 +302,15 @@ export default function PostPage() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, currentUser => {
       setUser(currentUser);
+       if (!currentUser) {
+        setPosts([]);
+      }
     });
     return () => unsubscribeAuth();
   }, [auth]);
 
   useEffect(() => {
     if (!user) {
-        setPosts([]);
         return;
     }
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -481,7 +482,7 @@ export default function PostPage() {
                                     <Image
                                     src={post.imageUrl}
                                     alt={`Postingan oleh ${post.userName}`}
-                                    layout="fill"
+                                    fill
                                     objectFit="contain"
                                     unoptimized
                                     />
@@ -573,7 +574,9 @@ export default function PostPage() {
                     <ScrollArea className="h-72 mt-4">
                         <div className="space-y-2 pr-4">
                             {loadingLikers ? (
-                                <CustomLoader />
+                                <div className="flex justify-center items-center h-full">
+                                    <Loader2 className="h-8 w-8 animate-spin" />
+                                </div>
                             ) : likers.length > 0 ? (
                                 likers.map(liker => (
                                     <div key={liker.id} className="flex items-center gap-3 p-3 rounded-lg bg-background shadow-neumorphic-inset">

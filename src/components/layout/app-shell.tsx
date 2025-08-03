@@ -8,7 +8,6 @@ import { Plus } from 'lucide-react';
 import { SidebarNav, menuItems } from './sidebar-nav';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getFirebaseApp } from '@/lib/firebase';
 import { CustomLoader } from './loader';
 import {
@@ -88,16 +87,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        if (isAuthRequired) {
-          router.push('/login');
-        }
-      }
       setUser(currentUser);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth, isAuthRequired, router]);
+  }, [auth]);
 
   useEffect(() => {
     if (loading) return;
@@ -247,17 +241,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Lottie 
-            path="/lottie-animations/404_kitty.json"
+            path="/lottie-animations/404-kitty.json"
             loop={true}
             autoplay={true}
             className="w-96 h-96"
         />
-        <p className="text-muted-foreground text-bold mt-4">Buka di perangkat seluler untuk membuka aplikasi.</p>
+        <p className="text-muted-foreground text-center font-bold">Buka di perangkat seluler untuk membuka aplikasi.</p>
       </div>
     );
   }
 
-  if ((!user && isAuthRequired)) {
+  if (!user && isAuthRequired) {
     return <CustomLoader />;
   }
   
