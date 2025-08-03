@@ -247,21 +247,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!isMobile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
-        <div className="relative">
-          <Lottie 
+        <Lottie 
             animationData={kittyAnimation} 
             loop={true} 
-            className="absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-48 z-10" 
-          />
-          <div className="text-center p-8 pt-20 max-w-md bg-card rounded-2xl shadow-neumorphic-outset">
-            <h1 className="text-3xl font-bold font-headline mb-2 text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-              Hanya untuk Seluler
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel untuk menggunakan aplikasi ini.
-            </p>
-          </div>
-        </div>
+            className="w-64 h-64"
+        />
       </div>
     );
   }
