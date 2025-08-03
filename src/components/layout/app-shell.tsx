@@ -121,7 +121,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       const handleKeyDown = (e: KeyboardEvent) => {
         // Blokir F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J, Ctrl+U, Ctrl+S
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'C', 'J'].includes(e.key.toUpperCase())) || (e.ctrlKey && ['U', 'S'].includes(e.key.toUpperCase()))) {
+        if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123 ||
+           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) ||
+           (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) ||
+           (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) ||
+           (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) ||
+           (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.keyCode === 83))) {
           e.preventDefault();
           return false;
         }
@@ -129,9 +134,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       
       const antiDebug = () => {
         const check = () => {
-          if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
+          if ((window.outerWidth - window.innerWidth) > 100 || (window.outerHeight - window.innerHeight) > 100) {
             debugger;
           }
+          function checkDebugger() {
+            const start = new Date().getTime();
+            debugger;
+            const end = new Date().getTime();
+            if (end - start > 100) {
+              // DevTools are open
+            }
+          }
+          checkDebugger();
         };
         const intervalId = setInterval(check, 1000);
         return () => clearInterval(intervalId);
@@ -235,14 +249,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!isMobile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
-        <div className="text-center p-8 max-w-md bg-card rounded-2xl shadow-neumorphic-outset">
-          <Lottie animationData={kittyAnimation} loop={true} className="mx-auto h-48 w-48" />
-          <h1 className="text-3xl font-bold font-headline mb-2 text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
-            Hanya untuk Seluler
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel untuk menggunakan aplikasi ini.
-          </p>
+        <div className="relative">
+          <Lottie 
+            animationData={kittyAnimation} 
+            loop={true} 
+            className="absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-48 z-10" 
+          />
+          <div className="text-center p-8 pt-20 max-w-md bg-card rounded-2xl shadow-neumorphic-outset">
+            <h1 className="text-3xl font-bold font-headline mb-2 text-foreground" style={{ textShadow: '1px 1px 2px #0d0d0d' }}>
+              Hanya untuk Seluler
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Aplikasi ini dirancang untuk pengalaman seluler. Silakan buka di ponsel untuk menggunakan aplikasi ini.
+            </p>
+          </div>
         </div>
       </div>
     );
