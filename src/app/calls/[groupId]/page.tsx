@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, Loader2, Users } from 'lucide-react';
-import type OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';
 import {
@@ -159,8 +158,8 @@ export default function GroupChatPage() {
     // Recording states
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
-    const OpusMediaRecorder = useRef<any>(null);
-    const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
+    const OpusMediaRecorderModule = useRef<any>(null);
+    const mediaRecorderRef = useRef<any | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const startTimeRef = useRef<number>(0);
@@ -211,7 +210,7 @@ export default function GroupChatPage() {
     useEffect(() => {
         import('opus-media-recorder')
         .then(mod => {
-            OpusMediaRecorder.current = mod.default;
+            OpusMediaRecorderModule.current = mod.default;
         })
         .catch(err => console.error("Failed to load OpusMediaRecorder:", err));
 
@@ -450,13 +449,13 @@ export default function GroupChatPage() {
     };
     
 const startRecording = useCallback(async () => {
-    if (isRecording || !OpusMediaRecorder.current) return;
+    if (isRecording || !OpusMediaRecorderModule.current) return;
     
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
 
-        const OMR = OpusMediaRecorder.current;
+        const OMR = OpusMediaRecorderModule.current;
         const options = { mimeType: 'audio/webm' }; 
         
         const workerUrl = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js';
