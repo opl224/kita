@@ -9,23 +9,11 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where, documentId, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { getFirebaseApp } from "@/lib/firebase";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { useDialogBackButton } from "@/components/layout/app-shell";
-
-const groupFormSchema = z.object({
-  name: z.string().min(3, "Nama grup minimal 3 karakter."),
-});
-
-type GroupFormValues = z.infer<typeof groupFormSchema>;
+import { CreateEditGroupDialog } from "@/components/ui/create-edit-group-dialog";
 
 type Group = {
   id: string;
@@ -39,61 +27,6 @@ type Group = {
 const SUPER_USER_UID = "vopA2wSkuDOqt2AUOPIvOdCMtAg2";
 
 const neumorphicCardStyle = "bg-background relative rounded-[30px] shadow-neumorphic-deep transition-all duration-300 border-none";
-const neumorphicInputStyle = "bg-background border-none h-12 text-base rounded-lg shadow-neumorphic-inset focus-visible:ring-2 focus-visible:ring-primary";
-const neumorphicButtonStyle = "h-12 text-base font-bold shadow-neumorphic-outset active:shadow-neumorphic-inset transition-all";
-
-
-export function CreateEditGroupDialog({ open, onOpenChange, editingGroup, onSubmit }: { open: boolean, onOpenChange: (open: boolean) => void, editingGroup: Group | null, onSubmit: (data: GroupFormValues) => void }) {
-  const form = useForm<GroupFormValues>({
-    resolver: zodResolver(groupFormSchema),
-    defaultValues: { name: "" },
-  });
-
-  useDialogBackButton(open, onOpenChange);
-
-  useEffect(() => {
-    if (editingGroup) {
-      form.setValue("name", editingGroup.name);
-    } else {
-      form.reset({ name: "" });
-    }
-  }, [editingGroup, form, open]);
-
-  const handleSubmit = (data: GroupFormValues) => {
-      onSubmit(data);
-      onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-transparent border-none shadow-none sm:max-w-md">
-            <div className="bg-background rounded-2xl shadow-neumorphic-outset p-6">
-                <DialogHeader>
-                    <DialogTitle>{editingGroup ? 'Ubah Nama Grup' : 'Buat Grup Baru'}</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 mt-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>{editingGroup ? 'Nama Grup Baru' : 'Nama Grup'}</FormLabel>
-                                <FormControl>
-                                <Input placeholder="Contoh: Tim Proyek Hebat" {...field} className={neumorphicInputStyle} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <Button type="submit" className={`${neumorphicButtonStyle} w-full`}>{editingGroup ? 'Simpan Perubahan' : 'Buat Grup'}</Button>
-                    </form>
-                </Form>
-            </div>
-        </DialogContent>
-    </Dialog>
-  );
-}
 
 
 export default function VoiceNoteGroupsPage() {
@@ -204,7 +137,7 @@ export default function VoiceNoteGroupsPage() {
 
   }, [db, user]);
 
-  const onGroupSubmit = async (data: GroupFormValues) => {
+  const onGroupSubmit = async (data: { name: string }) => {
     if (!user) return;
     try {
         if (editingGroup) {
@@ -363,6 +296,12 @@ export default function VoiceNoteGroupsPage() {
                 if (!isOpen) {
                     setIsCreateGroupOpen(false);
                     setEditingGroup(null);
+                } else {
+                    if (!!editingGroup) {
+                        setEditingGroup(editingGroup)
+                    } else {
+                        setIsCreateGroupOpen(true);
+                    }
                 }
             }}
             editingGroup={editingGroup}
