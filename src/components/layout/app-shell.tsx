@@ -23,6 +23,7 @@ import {
 import { Button } from '../ui/button';
 import { CreatePostDialog } from '@/app/post/page';
 import Lottie from "lottie-react";
+import kittyAnimation from '../../../public/lottie-animations/404-kitty.json';
 
 
 const SWIPE_THRESHOLD = 50;
@@ -241,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Lottie 
-            path="/lottie-animations/404-kitty.json"
+            animationData={kittyAnimation}
             loop={true}
             autoplay={true}
             className="w-96 h-96"
