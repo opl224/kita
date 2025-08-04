@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: "Kita's",
   description: "A modern audio communication app for everyone.",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
