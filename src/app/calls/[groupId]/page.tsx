@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, deleteDoc, getDocs, where, documentId } from 'firebase/firestore';
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Mic, UserPlus, Square, Play, Pause, Trash2, Loader2, Users } from 'lucide-react';
-import OpusMediaRecorder from 'opus-media-recorder';
+import type OpusMediaRecorder from 'opus-media-recorder';
 import { formatDistanceToNow } from 'date-fns';
 import { id, type Locale } from 'date-fns/locale';
 import {
@@ -159,11 +159,12 @@ export default function GroupChatPage() {
     // Recording states
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
-
+    const OpusMediaRecorder = useRef<any>(null);
     const mediaRecorderRef = useRef<OpusMediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const startTimeRef = useRef<number>(0);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
     
     const router = useRouter();
     const app = getFirebaseApp();
@@ -205,6 +206,25 @@ export default function GroupChatPage() {
             return `${result} yang lalu`;
         },
     };
+
+    // Dynamically import OpusMediaRecorder on client side
+    useEffect(() => {
+        import('opus-media-recorder')
+        .then(mod => {
+            OpusMediaRecorder.current = mod.default;
+        })
+        .catch(err => console.error("Failed to load OpusMediaRecorder:", err));
+
+        // Cleanup stream on component unmount
+        return () => {
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+            }
+        }
+    }, []);
 
 
     useEffect(() => {
@@ -429,12 +449,14 @@ export default function GroupChatPage() {
         }
     };
     
-const startRecording = async () => {
-    if (isRecording) return;
+const startRecording = useCallback(async () => {
+    if (isRecording || !OpusMediaRecorder.current) return;
     
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
+        mediaStreamRef.current = stream;
+
+        const OMR = OpusMediaRecorder.current;
         const options = { mimeType: 'audio/webm' }; 
         
         const workerUrl = 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/encoderWorker.umd.js';
@@ -449,7 +471,7 @@ const startRecording = async () => {
             WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
         };
 
-        const recorder = new OpusMediaRecorder(stream, options, workerOptions);
+        const recorder = new OMR(stream, options, workerOptions);
         mediaRecorderRef.current = recorder;
         audioChunksRef.current = [];
         
@@ -469,8 +491,13 @@ const startRecording = async () => {
             }
         };
 
-        recorder.onstop = async () => {
-            stream.getTracks().forEach(track => track.stop());
+        recorder.onstop = () => {
+            // Stop all media tracks
+            if (mediaStreamRef.current) {
+              mediaStreamRef.current.getTracks().forEach(track => track.stop());
+              mediaStreamRef.current = null;
+            }
+
             setIsRecording(false);
             if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
             URL.revokeObjectURL(workerObjectUrl);
@@ -485,26 +512,28 @@ const startRecording = async () => {
             audioChunksRef.current = [];
         };
 
-        recorder.start(100); // Trigger ondataavailable every 100ms
+        recorder.start(100);
 
     } catch (err) {
         console.error("Error starting recording:", err);
+        // Ensure UI state is correct on error
+        setIsRecording(false);
     }
-};
+}, [isRecording]);
 
-    const stopRecording = () => {
+    const stopRecording = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
-    };
+    }, []);
     
-    const toggleRecording = () => {
+    const toggleRecording = useCallback(() => {
         if (isRecording) {
             stopRecording();
         } else {
             startRecording();
         }
-    };
+    }, [isRecording, startRecording, stopRecording]);
 
     if (loading) {
         return <CustomLoader />;
@@ -670,3 +699,4 @@ const startRecording = async () => {
         </div>
     );
 }
+
