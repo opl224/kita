@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '../ui/button';
-import { CreatePostDialog } from '@/app/post/page';
+import { CreatePostDialog } from '@/components/ui/create-post-dialog';
 import Lottie from "lottie-react";
 import kittyAnimation from '../../../public/lottie-animations/404-kitty.json';
 
